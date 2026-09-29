@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-25T20:20:52.385Z",
+  "generated_at": "2026-09-29T14:41:01.598Z",
   "entries": {
     "IE00B4L5Y983": {
       "ticker": "SWDA.MI",
@@ -7,17 +7,17 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:51.529Z",
+      "fetched_at": "2026-09-29T14:41:00.968Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE00BTJRMP35": {
       "ticker": "XMME.MI",
-      "close": 83.24800109863281,
+      "close": 82.89399719238281,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-09-23",
-      "fetched_at": "2026-09-25T20:20:51.768Z",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-29T14:41:01.075Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -27,7 +27,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:51.858Z",
+      "fetched_at": "2026-09-29T14:41:01.141Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -37,7 +37,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:51.940Z",
+      "fetched_at": "2026-09-29T14:41:01.205Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -47,7 +47,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:52.026Z",
+      "fetched_at": "2026-09-29T14:41:01.271Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -57,7 +57,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:52.112Z",
+      "fetched_at": "2026-09-29T14:41:01.337Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -67,7 +67,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:52.196Z",
+      "fetched_at": "2026-09-29T14:41:01.404Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -77,7 +77,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:52.294Z",
+      "fetched_at": "2026-09-29T14:41:01.532Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -87,7 +87,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-09-25",
-      "fetched_at": "2026-09-25T20:20:52.385Z",
+      "fetched_at": "2026-09-29T14:41:01.598Z",
       "source": "yahoo_chart",
       "status": "ok"
     }
