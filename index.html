@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portfolio">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #1c2230;
+    --border:    #2a3447;
+    --gold:      #c9a84c;
+    --gold-dim:  #7a6230;
+    --text:      #e6edf3;
+    --text-dim:  #8b949e;
+    --green:     #3fb950;
+    --red:       #f85149;
+    --blue:      #58a6ff;
+    --purple:    #bc8cff;
+    --teal:      #39d353;
+    /* asset class colours */
+    --col-eq:    #58a6ff;
+    --col-bo:    #c9a84c;
+    --col-liq:   #3fb950;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  /* ── Summary KPI row ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .kpi {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .kpi-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+  .kpi-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .kpi-value.positive { color: var(--green); }
+  .kpi-value.negative { color: var(--red); }
+
+  /* ── Composition bar ── */
+  .comp-bar {
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 12px;
+    background: var(--surface2);
+  }
+  .comp-seg {
+    height: 100%;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+  .comp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Asset class breakdown ── */
+  .ac-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .ac-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .ac-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .ac-name { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; }
+  .ac-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 500; margin: 6px 0 2px; }
+  .ac-pct { font-size: 12px; color: var(--text-dim); }
+
+  /* ── Add position form ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr;
+    gap: 10px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 700px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11px; color: var(--text-dim); letter-spacing: .06em; }
+  input, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+  input::placeholder { color: var(--text-dim); }
+  select option { background: var(--surface); }
+  .btn {
+    background: var(--gold);
+    color: #0d1117;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: opacity .15s;
+    align-self: flex-end;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-danger:hover { background: rgba(248,81,73,.12); }
+  .btn-edit {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    margin-right: 4px;
+  }
+  .btn-edit:hover { color: var(--gold); border-color: var(--gold); }
+  .btn-save {
+    background: var(--gold);
+    color: #0d1117;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin-right: 4px;
+    transition: opacity .15s;
+  }
+  .btn-save:hover { opacity: .85; }
+  .btn-cancel {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  tr.editing-row td { background: rgba(201,168,76,.05); border-top: 1px solid var(--gold-dim); border-bottom: 1px solid var(--gold-dim); }
+  .edit-input {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 4px 6px;
+    width: 90px;
+    outline: none;
+  }
+  .edit-input:focus { border-color: var(--gold); }
+  .edit-select {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    padding: 4px 6px;
+    outline: none;
+  }
+  .edit-select:focus { border-color: var(--gold); }
+
+  /* ── Holdings table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 10px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  th:first-child, th:nth-child(2) { text-align: left; }
+  td {
+    padding: 10px 10px;
+    border-bottom: 1px solid rgba(42,52,71,.5);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-align: right;
+    vertical-align: middle;
+  }
+  td:first-child { text-align: left; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; }
+  td:nth-child(2) { text-align: left; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .badge {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: .04em;
+  }
+  .badge-eq  { background: rgba(88,166,255,.15); color: var(--col-eq); }
+  .badge-bo  { background: rgba(201,168,76,.15); color: var(--col-bo); }
+  .badge-liq { background: rgba(63,185,80,.15);  color: var(--col-liq); }
+  .positive { color: var(--green); }
+  .negative { color: var(--red); }
+  .neutral  { color: var(--text-dim); }
+
+  /* pct bar inside table */
+  .pct-bar-wrap { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+  .pct-bar-bg { width: 50px; height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+  .pct-bar-fill { height: 100%; border-radius: 2px; background: var(--gold-dim); }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 28px 0;
+    font-size: 13px;
+  }
+
+  /* ── Target allocation ── */
+  .target-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 500px) { .target-grid { grid-template-columns: 1fr; } }
+  .target-item { display: flex; flex-direction: column; gap: 6px; }
+  .target-item label { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+  .target-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .target-input-wrap { display: flex; align-items: center; gap: 6px; }
+  .target-input-wrap input { width: 70px; font-family: 'JetBrains Mono', monospace; }
+  .target-input-wrap span { font-size: 13px; color: var(--text-dim); }
+
+  /* deviation bars */
+  .dev-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .dev-label { font-size: 12px; width: 110px; flex-shrink: 0; }
+  .dev-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--surface2);
+    position: relative;
+    overflow: visible;
+  }
+  /* center line */
+  .dev-track::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    width: 1px;
+    height: 12px;
+    background: var(--border);
+  }
+  .dev-fill {
+    position: absolute;
+    top: 0;
+    height: 8px;
+    border-radius: 4px;
+    transition: width .5s, left .5s;
+  }
+  .dev-fill.over  { background: var(--red);   }
+  .dev-fill.under { background: var(--blue);  }
+  .dev-fill.ok    { background: var(--green); }
+  .dev-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    width: 60px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .dev-badge.over  { color: var(--red); }
+  .dev-badge.under { color: var(--blue); }
+  .dev-badge.ok    { color: var(--green); }
+  .dev-note { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Expandable detail row ── */
+  tr.main-row { cursor: pointer; }
+  tr.main-row:hover td { background: rgba(255,255,255,.03); }
+  .expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 4px;
+    transition: color .15s, transform .2s;
+    display: inline-block;
+    line-height: 1;
+  }
+  .expand-btn.open { transform: rotate(90deg); color: var(--gold); }
+  tr.detail-row td {
+    padding: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-inner {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .25s ease, padding .25s ease;
+    padding: 0 12px;
+    background: rgba(201,168,76,.04);
+  }
+  .detail-inner.open {
+    max-height: 260px;
+    padding: 10px 12px;
+  }
+  .detail-cell { display: flex; flex-direction: column; gap: 3px; }
+  .detail-cell-label { font-size: 10px; color: var(--text-dim); letter-spacing: .08em; text-transform: uppercase; font-family: 'Inter', sans-serif; }
+  .detail-cell-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); }
+
+  /* ── Inline add form ── */
+  .btn-add-inline {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+    width: 100%;
+    text-align: left;
+  }
+  .btn-add-inline:hover { border-color: var(--gold); color: var(--gold); }
+  .inline-add-form {
+    background: rgba(201,168,76,.04);
+    border-top: 1px solid var(--gold-dim);
+    padding: 12px 14px 10px;
+  }
+  .inline-add-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .inline-field { display: flex; flex-direction: column; gap: 4px; }
+  .inline-field label { font-size: 10px; color: var(--text-dim); letter-spacing: .07em; text-transform: uppercase; }
+  .inline-field input, .inline-field select { width: 120px; }
+  .inline-add-actions { display: flex; gap: 8px; }
+
+  /* ── Import Fineco ── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(201,168,76,.04);
+  }
+  .drop-zone input { display: none; }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-label { font-size: 13px; color: var(--text-dim); }
+  .drop-label span { color: var(--gold); cursor: pointer; }
+  .import-result {
+    margin-top: 14px;
+    font-size: 12px;
+    display: none;
+  }
+  .import-result table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .import-result th {
+    font-size: 10px; font-weight: 500; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim);
+    padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--border);
+  }
+  .import-result th:first-child, .import-result th:nth-child(2) { text-align: left; }
+  .import-result td {
+    padding: 7px 8px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-align: right;
+    border-bottom: 1px solid rgba(42,52,71,.4);
+  }
+  .import-result td:first-child { text-align: left; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .import-result td:nth-child(2) { text-align: left; }
+  .import-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+  .import-note { font-size: 11px; color: var(--text-dim); flex: 1; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">Portfolio</div>
+  <h1>Dashboard</h1>
+  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+    <div class="logo" id="ts" style="font-size:10px; color:var(--text-dim)"></div>
+    <div class="logo" id="priceStatus" style="font-size:10px; color:var(--text-dim); cursor:default;"></div>
+  </div>
+</header>
+
+<div id="priceStaleWarn" style="display:none; font-size:12px; color:var(--gold); background:rgba(201,168,76,.08); border:1px solid var(--gold-dim); border-radius:8px; padding:8px 12px; margin-bottom:14px;"></div>
+
+<!-- KPI -->
+<div class="kpi-row" id="kpiRow">
+  <div class="kpi"><div class="kpi-label">Valore Portafoglio</div><div class="kpi-value" id="kTotal">—</div></div>
+  <div class="kpi"><div class="kpi-label">Capitale Investito</div><div class="kpi-value" id="kCost">—</div></div>
+  <div class="kpi"><div class="kpi-label">P/L Non Realizzato</div><div class="kpi-value" id="kPL">—</div></div>
+  <div class="kpi"><div class="kpi-label">P/L Realizzato</div><div class="kpi-value" id="kPLreal">—</div></div>
+  <div class="kpi"><div class="kpi-label">P/L Totale</div><div class="kpi-value" id="kPLtot">—</div></div>
+  <div class="kpi"><div class="kpi-label">XIRR Portafoglio</div><div class="kpi-value" id="kCAGR">—</div></div>
+</div>
+
+<!-- Composition + Target -->
+<div class="card">
+  <div class="card-title">Composizione &amp; Target</div>
+
+  <!-- Target inputs — dynamic -->
+  <div id="targetGrid" class="target-grid" style="margin-bottom:20px;"></div>
+  <div id="targetWarn" style="font-size:11px; color:var(--red); margin-bottom:12px; display:none">⚠ I target non sommano a 100%</div>
+
+  <!-- Actual bar -->
+  <div style="margin-bottom:8px; font-size:11px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase;">Attuale</div>
+  <div class="comp-bar" id="compBar"></div>
+  <div class="comp-legend" id="compLegend" style="margin-bottom:18px;"></div>
+
+  <!-- Deviation from target -->
+  <div id="deviationSection" style="display:none">
+    <div style="margin-bottom:10px; font-size:11px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase;">Scostamento dal target</div>
+    <div id="deviationRows"></div>
+    <div class="dev-note">Blu = sottopeso · Rosso = sovrappeso · Verde = in target (±2%)</div>
+  </div>
+
+  <!-- AC cards -->
+  <div class="ac-grid" id="acGrid" style="margin-top:18px;"></div>
+</div>
+
+<!-- Holdings table -->
+<div class="card">
+  <div class="card-title">Posizioni</div>
+  <div class="table-wrap">
+    <table id="holdTable">
+      <thead>
+        <tr>
+          <th style="width:24px"></th>
+          <th style="text-align:left">Titolo</th>
+          <th style="text-align:left">Classe</th>
+          <th>Quote</th>
+          <th>P/L €</th>
+          <th>P/L %</th>
+          <th>XIRR</th>
+          <th>Peso %</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="holdBody">
+        <tr><td colspan="9" class="empty-state">Nessuna posizione. Aggiungi il primo titolo.</td></tr>
+      </tbody>
+      <tfoot id="holdFoot">
+        <tr id="addBtnRow">
+          <td colspan="9" style="padding:10px 6px;">
+            <button class="btn-add-inline" onclick="openInlineAdd()">＋ Aggiungi posizione</button>
+          </td>
+        </tr>
+        <tr id="addFormRow" style="display:none">
+          <td colspan="9" style="padding:0">
+            <div class="inline-add-form" id="inlineAddForm">
+              <div class="inline-add-fields">
+                <div class="inline-field">
+                  <label>Titolo</label>
+                  <input id="fName" placeholder="es. SWDA"/>
+                </div>
+                <div class="inline-field">
+                  <label>Classe</label>
+                  <select id="fAC">
+                    <option value="Azioni">Azioni</option>
+                    <option value="Obbligazioni">Obbligazioni</option>
+                    <option value="Liquidità">Liquidità</option>
+                  </select>
+                </div>
+                <div class="inline-field">
+                  <label>Quote</label>
+                  <input id="fQty" type="number" placeholder="0" min="0" step="any"/>
+                </div>
+                <div class="inline-field">
+                  <label>P. Carico (€)</label>
+                  <input id="fCost" type="number" placeholder="0.00" min="0" step="any"/>
+                </div>
+                <div class="inline-field">
+                  <label>P. Mercato (€)</label>
+                  <input id="fMkt" type="number" placeholder="0.00" min="0" step="any"/>
+                </div>
+              </div>
+              <div class="inline-add-actions">
+                <button class="btn-save" onclick="addRow()">✓ Aggiungi</button>
+                <button class="btn-cancel" onclick="closeInlineAdd()">Annulla</button>
+              </div>
+              <div id="formError" style="color:var(--red); font-size:11px; margin-top:6px; display:none"></div>
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Aggiungi operazione manuale -->
+<div class="card">
+  <div class="card-title" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="toggleOpSection()">
+    <span>Operazioni Manuali</span>
+    <span id="opSectionArrow" style="font-size:11px; color:var(--text-dim); transition:transform .2s">▶</span>
+  </div>
+  <div id="opSection" style="display:none">
+  <div id="opBtnRow">
+    <button class="btn-add-inline" onclick="openOpForm()">＋ Aggiungi operazione</button>
+  </div>
+  <div id="opFormRow" style="display:none; margin-top:12px;">
+    <div class="inline-add-fields" style="flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+      <div class="inline-field"><label>Ticker</label>
+        <select id="opTicker" style="width:130px" onchange="onTickerChange()">
+          <option value="">— seleziona —</option>
+        </select>
+        <input id="opTickerNew" placeholder="Nuovo ticker" style="width:120px; display:none; margin-top:4px"/>
+      </div>
+      <div class="inline-field"><label>Tipo</label>
+        <select id="opTipo" style="width:110px">
+          <option value="A">Acquisto</option>
+          <option value="V">Vendita</option>
+        </select>
+      </div>
+      <div class="inline-field"><label>Data</label><input id="opData" type="date" style="width:140px"/></div>
+      <div class="inline-field"><label>Quote</label><input id="opQty" type="number" step="any" placeholder="0" style="width:90px"/></div>
+      <div class="inline-field"><label>Prezzo (€)</label><input id="opPrice" type="number" step="any" placeholder="0.00" style="width:100px"/></div>
+      <div class="inline-field"><label>Commissione (€)</label><input id="opComm" type="number" step="any" placeholder="0.00" style="width:100px"/></div>
+      <div class="inline-field" id="opACField" style="display:none">
+        <label>Asset Class <span style="font-size:10px;color:var(--text-dim)">(solo nuovi titoli)</span></label>
+        <select id="opAC" style="width:130px">
+          <option value="Azioni">Azioni</option>
+          <option value="Obbligazioni">Obbligazioni</option>
+          <option value="Liquidità">Liquidità</option>
+        </select>
+      </div>
+    </div>
+    <div class="inline-add-actions">
+      <button class="btn-save" onclick="addOperation()">✓ Conferma</button>
+      <button class="btn-cancel" onclick="closeOpForm()">Annulla</button>
+    </div>
+    <div id="opError" style="color:var(--red);font-size:11px;margin-top:6px;display:none"></div>
+  </div>
+
+  <!-- Storico -->
+  <div id="opHistory" style="margin-top:16px; display:none">
+    <div style="font-size:11px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Storico operazioni manuali</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">Data</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">Ticker</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">Tipo</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">Quote</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">Prezzo</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">Comm.</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border)">P/L Real.</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="opBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div> <!-- end opSection -->
+</div> <!-- end card -->
+
+<!-- Import Fineco -->
+<div class="card">
+  <div class="card-title" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="toggleImportSection()">
+    <span>Import da Fineco</span>
+    <span id="importSectionArrow" style="font-size:11px; color:var(--text-dim); transition:transform .2s">▶</span>
+  </div>
+  <div id="importSection" style="display:none; margin-top:14px;">
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="event.preventDefault();this.classList.remove('drag-over');handleFile(event.dataTransfer.files[0])">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])"/>
+      <div class="drop-icon">📂</div>
+      <div class="drop-label">Trascina qui il file Fineco oppure <span>selezionalo</span></div>
+      <div class="drop-label" style="margin-top:4px; font-size:11px;">Accetta .xlsx · .xls · .csv</div>
+    </div>
+    <div class="import-result" id="importResult">
+      <div id="importSummary" style="color:var(--text-dim); margin-bottom:4px;"></div>
+      <div id="importQuality" style="display:none; margin-bottom:10px; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px; line-height:1.5;"></div>
+      <div style="overflow-x:auto">
+        <table id="importTable">
+          <thead><tr>
+            <th>Ticker</th><th>Classe</th><th>Quote nette</th>
+            <th>P. medio carico</th><th>Commissioni tot.</th><th>Prima operazione</th>
+          </tr></thead>
+          <tbody id="importBody"></tbody>
+        </table>
+      </div>
+      <div class="import-actions">
+        <div class="import-note">⚠ Prezzi di mercato da aggiornare dopo l'import</div>
+        <button class="btn" onclick="applyImport()">↓ Applica al portafoglio</button>
+        <button class="btn-cancel" onclick="clearImport()">Annulla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: nuovo ETF sconosciuto -->
+<div id="unknownEtfModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; max-width:380px; width:90%; margin:auto;">
+    <div style="font-size:13px; font-weight:600; color:var(--gold); margin-bottom:12px;">Nuovo titolo trovato</div>
+    <div id="unknownEtfDesc" style="font-size:12px; color:var(--text-dim); margin-bottom:16px;"></div>
+    <div class="inline-field" style="margin-bottom:16px;">
+      <label style="font-size:11px; color:var(--text-dim);">Ticker (come vuoi chiamarlo)</label>
+      <input id="unknownEtfTicker" style="width:100%; margin-top:4px;" placeholder="es. NEWETF"/>
+    </div>
+    <div class="inline-field" style="margin-bottom:16px;">
+      <label style="font-size:11px; color:var(--text-dim);">Asset Class</label>
+      <select id="unknownEtfAC" style="width:100%; margin-top:4px;">
+        <option value="Azioni">Azioni</option>
+        <option value="Obbligazioni">Obbligazioni</option>
+        <option value="Liquidità">Liquidità</option>
+        <option value="Oro">Oro</option>
+        <option value="Altro">Altro</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn-cancel" onclick="skipUnknownEtf()">Salta</button>
+      <button class="btn-save" onclick="confirmUnknownEtf()">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let positions  = JSON.parse(localStorage.getItem('pfPositions')  || '[]');
+let operations = JSON.parse(localStorage.getItem('pfOperations') || '[]');
+let editingKey = null;
+let targets = JSON.parse(localStorage.getItem('pfTargets') || '{"eq":0,"bo":0,"liq":0}');
+let expandedRows = new Set(); // ora contiene p.name, non indici
+let opSectionOpen = false;
+let importSectionOpen = false;
+let unknownEtfQueue = [];   // lista di ISIN sconosciuti da classificare
+let unknownEtfCurrent = null;
+// storico completo delle operazioni importate, per ISIN, accumulato tra più import
+// (necessario perché Fineco limita l'intervallo esportabile: più file coprono periodi diversi)
+let importedOpsStore = JSON.parse(localStorage.getItem('pfImportedOps') || '{}');
+Object.values(importedOpsStore).forEach(entry => {
+  entry.ops.forEach(op => op.date = new Date(op.date));
+  (entry.cedole || []).forEach(c => c.date = new Date(c.date));
+});
+let importWarnings = []; // avvisi di qualità raccolti durante l'ultimo import
+let importToken = 0; // incrementato ad ogni handleFile(): permette a una callback asincrona
+                      // superata da una selezione di file più recente di riconoscersi e abortire
+
+function toggleOpSection() {
+  opSectionOpen = !opSectionOpen;
+  document.getElementById('opSection').style.display = opSectionOpen ? 'block' : 'none';
+  document.getElementById('opSectionArrow').style.transform = opSectionOpen ? 'rotate(90deg)' : 'none';
+  document.getElementById('opSectionArrow').style.color = opSectionOpen ? 'var(--gold)' : 'var(--text-dim)';
+}
+
+function toggleImportSection() {
+  importSectionOpen = !importSectionOpen;
+  document.getElementById('importSection').style.display = importSectionOpen ? 'block' : 'none';
+  document.getElementById('importSectionArrow').style.transform = importSectionOpen ? 'rotate(90deg)' : 'none';
+  document.getElementById('importSectionArrow').style.color = importSectionOpen ? 'var(--gold)' : 'var(--text-dim)';
+}
+
+function showNextUnknownEtf() {
+  if (!unknownEtfQueue.length) {
+    document.getElementById('unknownEtfModal').style.display = 'none';
+    renderImportTable();
+    return;
+  }
+  unknownEtfCurrent = unknownEtfQueue.shift();
+  document.getElementById('unknownEtfDesc').textContent =
+    'ISIN: ' + unknownEtfCurrent.isin + ' — trovato nel file Fineco ma non riconosciuto. Assegnagli un ticker e una asset class.';
+  document.getElementById('unknownEtfTicker').value = unknownEtfCurrent.isin.slice(-6);
+  document.getElementById('unknownEtfModal').style.display = 'flex';
+}
+
+function confirmUnknownEtf() {
+  const ticker = document.getElementById('unknownEtfTicker').value.trim().toUpperCase();
+  const ac     = document.getElementById('unknownEtfAC').value;
+  if (!ticker) return;
+  // Verifica di unicità: stesso motivo di saveEdit(). FINECO_MAP contiene già, per
+  // costruzione (Object.assign(FINECO_MAP, customSecurities) al caricamento, riga 1436),
+  // anche le classificazioni salvate in sessioni precedenti — il controllo le copre
+  // automaticamente, senza bisogno di leggere customSecurities separatamente.
+  const tickerCollision = Object.entries(FINECO_MAP).some(([isin, info]) =>
+    isin !== unknownEtfCurrent.isin && info.ticker === ticker
+  );
+  if (tickerCollision) {
+    alert(`Il ticker "${ticker}" è già assegnato a un altro titolo. Scegline uno diverso.`);
+    return;
+  }
+  // aggiungi alla mappa e persisti, così sopravvive a un reload della pagina
+  FINECO_MAP[unknownEtfCurrent.isin] = { ticker, ac, name: ticker };
+  customSecurities[unknownEtfCurrent.isin] = { ticker, ac, name: ticker };
+  try { localStorage.setItem('pfCustomSecurities', JSON.stringify(customSecurities)); } catch(e) {}
+  // riprocessa il dato
+  const d = unknownEtfCurrent.data;
+  d.ticker = ticker;
+  d.ac     = ac;
+  d.name   = ticker;
+  document.getElementById('unknownEtfModal').style.display = 'none';
+  showNextUnknownEtf();
+}
+
+function skipUnknownEtf() {
+  // rimuovi dalla importedData
+  importedData = importedData.filter(d => d.isin !== unknownEtfCurrent.isin);
+  document.getElementById('unknownEtfModal').style.display = 'none';
+  showNextUnknownEtf();
+}
+
+// restore target inputs
+window.addEventListener('DOMContentLoaded', () => {
+  renderTargetInputs();
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt = (n, dec=2) => n.toLocaleString('it-IT', {minimumFractionDigits:dec, maximumFractionDigits:dec});
+const fmtEur = (n) => '€ ' + fmt(n);
+const fmtPct = (n) => (n>=0?'+':'')+fmt(n,2)+'%';
+
+function badgeHtml(ac) {
+  const map = { 'Azioni':'badge-eq','Obbligazioni':'badge-bo','Liquidità':'badge-liq' };
+  return `<span class="badge ${map[ac]||''}">${ac}</span>`;
+}
+
+// Chiave stabile per identificare una posizione: p.name (stesso criterio già usato
+// dal merge in applyImport(), righe 1746/1762-1763). Mai usare l'indice di array.
+// domKey: versione sicura da usare come id DOM (nessuno spazio/carattere speciale).
+function domKey(name) {
+  return String(name).replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+// jsAttr: incorpora una stringa come letterale JS sicuro dentro un attributo
+// HTML onclick="..." (gestisce apici, virgolette, caratteri speciali).
+function jsAttr(name) {
+  return JSON.stringify(String(name)).replace(/"/g, '&quot;');
+}
+
+// Opzioni Asset Class per il <select> di editRow (id="eAC"): sempre le 3 classi
+// standard, più qualunque altra asset class già presente in positions (es.
+// "Oro"), con lo stesso criterio dinamico di openInlineAdd(). Così una
+// posizione esistente non può mai perdere silenziosamente la propria
+// classificazione perché mancava la relativa <option> nel select.
+function acSelectOptionsHtml(selectedAc) {
+  const ACS = [...new Set(['Azioni', 'Obbligazioni', 'Liquidità', ...positions.map(p => p.ac)])].sort();
+  return ACS.map(a => `<option${a === selectedAc ? ' selected' : ''}>${a}</option>`).join('');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const body = document.getElementById('holdBody');
+  // Vista derivata del portafoglio attivo.
+  // È ricalcolata ad ogni render e non viene persistita.
+  const openPositions = positions.filter(p => !p.closed);
+  const totalPortVal = openPositions.reduce((s,p) => s + p.qty * (p.isNominal ? p.mkt * 10 : p.mkt), 0);
+
+  let rows = '';
+  if (!openPositions.length) {
+    rows = '<tr><td colspan="9" class="empty-state">Nessuna posizione. Aggiungi il primo titolo.</td></tr>';
+    // Azzera solo i KPI del portafoglio attivo (kTotal/kCost/kPL). I KPI storici
+    // (P/L realizzato, P/L totale, XIRR di portafoglio) restano invariati qui:
+    // vengono comunque calcolati più sotto (righe 936-976, non toccate da questo
+    // sotto-step), perché devono continuare a riflettere le posizioni chiuse anche
+    // quando non resta nessuna posizione attiva.
+    resetKPI();
+  } else {
+  openPositions.forEach((p) => {
+    const mktReal  = p.isNominal ? p.mkt   * 10 : p.mkt;
+    const costReal = p.isNominal ? p.price * 10 : p.price;
+    const cost  = p.qty * costReal;
+    const val   = p.qty * mktReal;
+    const pl    = val - cost;
+    const plPct = cost ? (pl/cost*100) : 0;
+    const weight= totalPortVal ? (val/totalPortVal*100) : 0;
+    const plClass = pl>0?'positive':pl<0?'negative':'neutral';
+
+    if (editingKey === p.name) {
+      rows += `<tr class="editing-row">
+        <td></td>
+        <td><input class="edit-input" id="eN" value="${p.name}" style="width:100px"/></td>
+        <td><select class="edit-select" id="eAC">${acSelectOptionsHtml(p.ac)}</select></td>
+        <td><input class="edit-input" id="eQty" type="number" step="any" value="${p.qty}"/></td>
+        <td colspan="3" style="color:var(--text-dim); font-size:11px; font-family:'Inter',sans-serif;">
+          P.Carico: <input class="edit-input" id="ePrice" type="number" step="any" value="${p.price}" style="width:80px"/>
+          &nbsp; P.Mkt: <input class="edit-input" id="eMkt" type="number" step="any" value="${p.mkt}" style="width:105px"/>
+        </td>
+        <td></td>
+        <td>
+          <button class="btn-save" onclick="saveEdit(${jsAttr(p.name)})">✓ Salva</button>
+          <button class="btn-cancel" onclick="cancelEdit()">Annulla</button>
+        </td>
+      </tr>`;
+    } else {
+      const isOpen = expandedRows.has(p.name);
+      // XIRR per titolo
+      const xirrVal = (() => {
+        if (!p.cashFlows || !p.mkt || p.mkt === 0) return null;
+        const mktReal = p.isNominal ? p.mkt * 10 : p.mkt;
+        // Flusso terminale = solo il valore di mercato residuo. Le cedole non vanno
+        // riaggiunte qui: sono già presenti in p.cashFlows come flusso reale a sé
+        // (vedi costruzione import) — sommarle di nuovo le conterebbe due volte.
+        const flows = [
+          ...p.cashFlows.map(f => ({ amount: f.amount, date: new Date(f.date) })),
+          { amount: p.qty * mktReal, date: new Date() }
+        ];
+        return xirr(flows);
+      })();
+      const xirrHtml = xirrVal !== null
+        ? `<span class="${xirrVal>=0?'positive':'negative'}">${(xirrVal>=0?'+':'')+fmt(xirrVal,1)}%</span>`
+        : `<span style="color:var(--text-dim); font-size:11px;">--</span>`;
+
+      rows += `<tr class="main-row" onclick="toggleDetail(${jsAttr(p.name)})">
+        <td><button class="expand-btn${isOpen?' open':''}" onclick="event.stopPropagation();toggleDetail(${jsAttr(p.name)})">▶</button></td>
+        <td style="text-align:left">${p.name}</td>
+        <td style="text-align:left">${badgeHtml(p.ac)}</td>
+        <td>${fmt(p.qty,4)}</td>
+        <td class="${plClass}">${fmtEur(pl)}</td>
+        <td class="${plClass}">${fmtPct(plPct)}</td>
+        <td>${xirrHtml}</td>
+        <td>
+          <div class="pct-bar-wrap">
+            <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${Math.min(weight,100)}%"></div></div>
+            <span>${fmt(weight,1)}%</span>
+          </div>
+        </td>
+        <td style="white-space:nowrap" onclick="event.stopPropagation()">
+          <button class="btn-edit" onclick="editRow(${jsAttr(p.name)})">✎</button>
+          <button class="btn-danger" onclick="removeRow(${jsAttr(p.name)})">✕</button>
+        </td>
+      </tr>
+      <tr class="detail-row">
+        <td colspan="9">
+          <div class="detail-inner${isOpen?' open':''}" id="detail-${domKey(p.name)}">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Prezzo Carico${p.isNominal ? ' (% nom.)' : ''}</div>
+              <div class="detail-cell-val">${p.isNominal ? fmt(p.price,2)+'%' : fmtEur(p.price)}</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Prezzo Mercato${p.isNominal ? ' (% nom.)' : ''}</div>
+              <div class="detail-cell-val">${p.isNominal ? fmt(p.mkt,2)+'%' : fmtEur(p.mkt)}</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Costo Totale</div>
+              <div class="detail-cell-val">${fmtEur(cost)}</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Valore Mercato</div>
+              <div class="detail-cell-val">${fmtEur(val)}</div>
+            </div>
+            ${p.commTot ? '<div class="detail-cell"><div class="detail-cell-label">Commissioni</div><div class="detail-cell-val" style="color:var(--red)">-' + fmtEur(p.commTot) + '</div></div>' : ''}
+            ${p.cedole  ? '<div class="detail-cell"><div class="detail-cell-label">Cedole incassate</div><div class="detail-cell-val" style="color:var(--green)">+' + fmtEur(p.cedole) + '</div></div>' : ''}
+            ${p.realizedPLgross ? '<div class="detail-cell"><div class="detail-cell-label">P/L Realizzato lordo</div><div class="detail-cell-val" style="color:' + (p.realizedPLgross>=0?'var(--green)':'var(--red)') + '">' + fmtEur(p.realizedPLgross) + '</div></div>' : ''}
+            ${p.realizedPLnet   ? '<div class="detail-cell"><div class="detail-cell-label">P/L Realizzato netto</div><div class="detail-cell-val" style="color:' + (p.realizedPLnet>=0?'var(--green)':'var(--red)') + '">' + fmtEur(p.realizedPLnet) + '</div></div>' : ''}
+            ${p.firstDate ? '<div class="detail-cell"><div class="detail-cell-label">Prima operazione</div><div class="detail-cell-val" style="font-size:11px">' + new Date(p.firstDate).toLocaleDateString('it-IT') + '</div></div>' : ''}
+            ${xirrVal !== null ? '<div class="detail-cell"><div class="detail-cell-label">XIRR (Total Return)</div><div class="detail-cell-val" style="color:' + (xirrVal>=0?'var(--green)':'var(--red)') + '">' + (xirrVal>=0?'+':'') + fmt(xirrVal,2) + '%</div></div>' : ''}
+          </div>
+        </td>
+      </tr>`;
+    }
+  });
+  }
+  body.innerHTML = rows;
+
+  // KPI
+  const totalCost = openPositions.reduce((s,p) => s + p.qty * (p.isNominal ? p.price*10 : p.price), 0);
+  document.getElementById('kTotal').textContent  = fmtEur(totalPortVal);
+  document.getElementById('kCost').textContent   = fmtEur(totalCost);
+
+  // P/L non realizzato (posizioni aperte)
+  const unrealPL = totalPortVal - totalCost;
+  const plEl = document.getElementById('kPL');
+  plEl.textContent = fmtEur(unrealPL);
+  plEl.className = 'kpi-value ' + (unrealPL>0?'positive':unrealPL<0?'negative':'');
+
+  // P/L realizzato lordo e netto fiscale
+  const realPLgross = positions.reduce((s,p) => s + (p.realizedPLgross||0), 0)
+    + operations.filter(o=>o.tipo==='V'&&!o.fromImport&&o.costBasis>0)
+        .reduce((s,o)=>s+(o.qty*o.price-(o.comm||0))-o.costBasis, 0);
+
+  const realPLnet = positions.reduce((s,p) => s + (p.realizedPLnet||0), 0)
+    + operations.filter(o=>o.tipo==='V'&&!o.fromImport&&o.costBasis>0)
+        .reduce((s,o)=>{
+          const g=(o.qty*o.price-(o.comm||0))-o.costBasis;
+          return s + netRealizedPL(g, o.ticker||'');
+        }, 0);
+
+  const realEl = document.getElementById('kPLreal');
+  if (realPLgross !== 0) {
+    const taxPaid = realPLgross - realPLnet;
+    realEl.textContent = fmtEur(realPLnet) + ' (lordo ' + fmtEur(realPLgross) + ', imp. ' + fmtEur(taxPaid) + ')';
+    realEl.style.fontSize = '11px';
+  } else {
+    realEl.textContent = fmtEur(realPLnet);
+    realEl.style.fontSize = '';
+  }
+  realEl.className = 'kpi-value ' + (realPLnet>0?'positive':realPLnet<0?'negative':'');
+
+  // per P/L totale usiamo il netto
+  const realPL = realPLnet;
+
+  // P/L totale
+  const totPL = unrealPL + realPL;
+  const totEl = document.getElementById('kPLtot');
+  totEl.textContent = fmtEur(totPL);
+  totEl.className = 'kpi-value ' + (totPL>0?'positive':totPL<0?'negative':'');
+
+  // Portfolio XIRR -- aggregates all cashflows across positions (aperte e chiuse)
+  const cagrEl = document.getElementById('kCAGR');
+  const posWithFlows = positions.filter(p => p.cashFlows && (p.closed || p.mkt > 0));
+  if (posWithFlows.length > 0) {
+    const allFlows = [];
+    posWithFlows.forEach(p => {
+      p.cashFlows.forEach(f => allFlows.push({ amount: f.amount, date: new Date(f.date) }));
+      if (!p.closed) {
+        // Solo per le posizioni aperte: flusso terminale = valore di mercato attuale.
+        // Le cedole non vengono riaggiunte qui: sono già presenti in p.cashFlows come
+        // flusso reale a sé (vedi costruzione import) — sommarle di nuovo le conterebbe due volte.
+        const mktReal = p.isNominal ? p.mkt * 10 : p.mkt;
+        allFlows.push({ amount: p.qty * mktReal, date: new Date() });
+      }
+      // Per le posizioni chiuse: nessun flusso terminale. p.cashFlows è già completo
+      // e auto-conclusivo (l'ultima vendita è l'uscita), incluse le eventuali cedole.
+    });
+    // sort by date
+    allFlows.sort((a,b) => a.date - b.date);
+    const portXIRR = xirr(allFlows);
+    if (portXIRR !== null) {
+      cagrEl.textContent = (portXIRR>=0?'+':'')+fmt(portXIRR,1)+'%';
+      cagrEl.className = 'kpi-value ' + (portXIRR>=0?'positive':'negative');
+    } else {
+      cagrEl.textContent = '--';
+      cagrEl.className = 'kpi-value';
+    }
+  } else {
+    cagrEl.textContent = '--';
+    cagrEl.className = 'kpi-value';
+  }
+
+  // Asset class breakdown -- solo portafoglio attivo (openPositions), non le posizioni chiuse
+  const ACS = [...new Set(openPositions.map(p => p.ac))].sort();
+  const acVals = {};
+  ACS.forEach(a => {
+    acVals[a] = openPositions.filter(p=>p.ac===a).reduce((s,p)=>s + p.qty*(p.isNominal ? p.mkt*10 : p.mkt),0);
+  });
+  const acPcts = {};
+  ACS.forEach(a => { acPcts[a] = totalPortVal ? (acVals[a]/totalPortVal*100) : 0; });
+
+  // Dynamic AC cards and composition bar
+  renderACSection(ACS, acVals, acPcts, totalPortVal);
+  renderTargetInputs();
+  renderDeviation();
+  renderOpHistory();
+  save();
+}
+
+// AC colour palette -- cycles for extra asset classes
+const AC_COLORS = ['#58a6ff','#c9a84c','#3fb950','#bc8cff','#f0883e','#ff7b72','#79c0ff','#56d364'];
+function acColor(ac) {
+  const fixed = {'Azioni':'#58a6ff','Obbligazioni':'#c9a84c','Liquidità':'#3fb950','Oro':'#f0883e'};
+  if (fixed[ac]) return fixed[ac];
+  // Vista derivata locale, stessa fonte usata da ACS nella pipeline allocazione.
+  const openPositions = positions.filter(p => !p.closed);
+  const idx = [...new Set(openPositions.map(p=>p.ac))].indexOf(ac) % AC_COLORS.length;
+  return AC_COLORS[idx];
+}
+
+function renderACSection(ACS, acVals, acPcts, totalPortVal) {
+  // composition bar
+  const bar = document.getElementById('compBar');
+  bar.innerHTML = ACS.map(a =>
+    '<div class="comp-seg" style="background:' + acColor(a) + '; width:' + (acPcts[a]||0) + '%"></div>'
+  ).join('');
+
+  // legend
+  const leg = document.getElementById('compLegend');
+  leg.innerHTML = ACS.map(a =>
+    '<div class="legend-item"><div class="legend-dot" style="background:' + acColor(a) + '"></div><span>' + a + ' ' + fmt(acPcts[a]||0,1) + '%</span></div>'
+  ).join('');
+
+  // AC cards
+  const grid = document.getElementById('acGrid');
+  grid.innerHTML = ACS.map(a =>
+    '<div class="ac-card">' +
+      '<div><span class="ac-dot" style="background:' + acColor(a) + '"></span>' +
+      '<span class="ac-name">' + a + '</span></div>' +
+      '<div class="ac-value">' + fmtEur(acVals[a]||0) + '</div>' +
+      '<div class="ac-pct">' + fmt(acPcts[a]||0,1) + '%</div>' +
+    '</div>'
+  ).join('');
+
+  // target deviation -- rebuild dynamically
+  renderDeviation(ACS, acPcts);
+}
+
+function resetKPI() {
+  // Solo i KPI che rappresentano il portafoglio attivo (valore/costo/P&L non
+  // realizzato). I KPI storici (P/L realizzato, P/L totale, XIRR di portafoglio)
+  // non vanno azzerati qui: restano validi anche a portafoglio interamente
+  // liquidato, perché derivano dalle posizioni chiuse, non da quelle aperte.
+  ['kTotal','kCost','kPL'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.textContent='--';
+  });
+}
+
+// ── CRUD ──────────────────────────────────────────────────────────────────────
+function openInlineAdd() {
+  // populate AC select dynamically
+  const sel = document.getElementById('fAC');
+  const ACS = [...new Set(['Azioni','Obbligazioni','Liquidità',...positions.map(p=>p.ac)])].sort();
+  sel.innerHTML = ACS.map(a => '<option value="' + a + '">' + a + '</option>').join('');
+  document.getElementById('addBtnRow').style.display = 'none';
+  document.getElementById('addFormRow').style.display = '';
+  setTimeout(() => { document.getElementById('fName').focus(); }, 50);
+}
+
+function closeInlineAdd() {
+  document.getElementById('addBtnRow').style.display = '';
+  document.getElementById('addFormRow').style.display = 'none';
+  ['fName','fQty','fCost','fMkt'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('formError').style.display = 'none';
+}
+
+function addRow() {
+  const name  = document.getElementById('fName').value.trim();
+  const ac    = document.getElementById('fAC').value;
+  const qty   = parseFloat(document.getElementById('fQty').value);
+  const price = parseFloat(document.getElementById('fCost').value);
+  const mkt   = parseFloat(document.getElementById('fMkt').value);
+  const err   = document.getElementById('formError');
+
+  if (!name || isNaN(qty)||qty<=0 || isNaN(price)||price<=0 || isNaN(mkt)||mkt<=0) {
+    err.textContent = 'Compila tutti i campi con valori validi.';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  positions.push({ name, ac, qty, price, mkt });
+  closeInlineAdd();
+  render();
+}
+
+function toggleDetail(name) {
+  if (expandedRows.has(name)) {
+    expandedRows.delete(name);
+  } else {
+    expandedRows.add(name);
+  }
+  // toggle classes directly without full re-render for smooth animation
+  const detail = document.getElementById('detail-'+domKey(name));
+  if (detail) detail.classList.toggle('open', expandedRows.has(name));
+}
+
+function editRow(name) {
+  editingKey = name;
+  render();
+  // focus first input
+  setTimeout(() => { const el = document.getElementById('eN'); if(el) el.focus(); }, 50);
+}
+
+function saveEdit(oldName) {
+  const name  = document.getElementById('eN').value.trim();
+  const ac    = document.getElementById('eAC').value;
+  const qty   = parseFloat(document.getElementById('eQty').value);
+  const price = parseFloat(document.getElementById('ePrice').value);
+  const mkt   = parseFloat(document.getElementById('eMkt').value);
+  // mkt=0 è un valore VALIDO qui: rappresenta una posizione importata per cui il
+  // prezzo di mercato non è ancora stato inserito (Fineco non lo esporta). Blocca
+  // solo valori mancanti/negativi; qty e price restano obbligatoriamente > 0.
+  if (!name || isNaN(qty)||qty<=0 || isNaN(price)||price<=0 || isNaN(mkt)||mkt<0) {
+    alert('Tutti i campi devono avere valori validi.');
+    return;
+  }
+  const idx = positions.findIndex(p => p.name === oldName);
+  if (idx === -1) { editingKey = null; render(); return; }
+  // Verifica di unicità: name è la chiave d'identità del modello (usata da applyImport(),
+  // editRow, removeRow, toggleDetail). applyImport() la presuppone senza verificarla
+  // (Set su p.name in fase di merge), quindi va garantita qui, l'unico punto in cui
+  // l'utente può assegnare liberamente un nuovo nome a una posizione esistente.
+  // Esclusione per indice (non per nome): così una modifica che lascia il nome invariato
+  // non viene erroneamente bloccata come collisione contro se stessa.
+  const nameCollision = positions.some((p, i) => i !== idx && p.name === name);
+  if (nameCollision) {
+    alert(`Esiste già una posizione chiamata "${name}". Scegli un nome diverso.`);
+    return;
+  }
+  positions[idx] = { ...positions[idx], name, ac, qty, price, mkt };
+  if (positions[idx].isin) {
+    FINECO_MAP[positions[idx].isin] = { ticker: positions[idx].ticker || name, ac, name };
+    customSecurities[positions[idx].isin] = FINECO_MAP[positions[idx].isin];
+    try { localStorage.setItem('pfCustomSecurities', JSON.stringify(customSecurities)); } catch(e) {}
+  }
+  editingKey = null;
+  render();
+}
+
+function cancelEdit() {
+  editingKey = null;
+  render();
+}
+
+function removeRow(name) {
+  const idx = positions.findIndex(p => p.name === name);
+  if (idx === -1) return;
+  positions.splice(idx,1);
+  render();
+}
+
+function save() {
+  try {
+    localStorage.setItem('pfPositions', JSON.stringify(positions));
+    localStorage.setItem('pfOperations', JSON.stringify(operations));
+  } catch(e){}
+}
+
+function renderTargetInputs() {
+  // Vista derivata locale (funzione indipendente da render(), stesso criterio: !p.closed).
+  const openPositions = positions.filter(p => !p.closed);
+  const ACS = [...new Set(openPositions.map(p => p.ac))].sort();
+  const grid = document.getElementById('targetGrid');
+  grid.style.gridTemplateColumns = 'repeat(' + Math.min(ACS.length, 4) + ', 1fr)';
+  grid.innerHTML = ACS.map(a =>
+    '<div class="target-item">' +
+      '<label><span class="target-dot" style="background:' + acColor(a) + '"></span>' + a + ' &ndash; target</label>' +
+      '<div class="target-input-wrap">' +
+        '<input type="number" id="t_' + a.replace(/\s/g,'_') + '" min="0" max="100" step="1" placeholder="0" ' +
+        'value="' + (targets[a]||'') + '" oninput="saveTargets()"/>' +
+        '<span>%</span>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function saveTargets() {
+  // Vista derivata locale, stesso criterio di render()/renderTargetInputs().
+  const openPositions = positions.filter(p => !p.closed);
+  const ACS = [...new Set(openPositions.map(p => p.ac))].sort();
+  targets = {};
+  ACS.forEach(a => {
+    const el = document.getElementById('t_' + a.replace(/\s/g,'_'));
+    targets[a] = el ? (parseFloat(el.value)||0) : 0;
+  });
+  try { localStorage.setItem('pfTargets', JSON.stringify(targets)); } catch(e){}
+  const sum = Object.values(targets).reduce((s,v)=>s+v,0);
+  const warn = document.getElementById('targetWarn');
+  warn.style.display = (sum > 0 && Math.abs(sum-100) > 0.5) ? 'block' : 'none';
+  // re-render deviation with current acPcts
+  const totalPortVal = openPositions.reduce((s,p)=>s + p.qty*(p.isNominal?p.mkt*10:p.mkt),0);
+  const acPcts = {};
+  ACS.forEach(a => {
+    const v = openPositions.filter(p=>p.ac===a).reduce((s,p)=>s+p.qty*(p.isNominal?p.mkt*10:p.mkt),0);
+    acPcts[a] = totalPortVal ? (v/totalPortVal*100) : 0;
+  });
+  renderDeviation(ACS, acPcts);
+}
+
+function renderDeviation(ACS, acPcts) {
+  if (!ACS) {
+    // Vista derivata locale, stesso criterio di render()/renderTargetInputs()/saveTargets().
+    const openPositions = positions.filter(p => !p.closed);
+    ACS = [...new Set(openPositions.map(p => p.ac))].sort();
+    const totalPortVal = openPositions.reduce((s,p)=>s + p.qty*(p.isNominal?p.mkt*10:p.mkt),0);
+    acPcts = {};
+    ACS.forEach(a => {
+      const v = openPositions.filter(p=>p.ac===a).reduce((s,p)=>s+p.qty*(p.isNominal?p.mkt*10:p.mkt),0);
+      acPcts[a] = totalPortVal ? (v/totalPortVal*100) : 0;
+    });
+  }
+  const hasTargets = Object.values(targets).some(v=>v>0);
+  const section = document.getElementById('deviationSection');
+  section.style.display = hasTargets ? 'block' : 'none';
+  if (!hasTargets) return;
+
+  const rows = document.getElementById('deviationRows');
+  rows.innerHTML = ACS.map(a => {
+    const tgt  = targets[a] || 0;
+    const act  = acPcts[a]  || 0;
+    const diff = act - tgt;
+    const maxDev = 20;
+    const pct  = Math.min(Math.abs(diff)/maxDev*50, 50);
+    const cls  = Math.abs(diff)<=2 ? 'ok' : diff>0 ? 'over' : 'under';
+    const col  = acColor(a);
+    const fillLeft  = diff >= 0 ? 50 : (50-pct);
+    const fillWidth = pct;
+    return '<div class="dev-row">' +
+      '<div class="dev-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + col + ';margin-right:6px"></span>' + a + '</div>' +
+      '<div class="dev-track"><div class="dev-fill ' + cls + '" style="left:' + fillLeft + '%;width:' + fillWidth + '%"></div></div>' +
+      '<div class="dev-badge ' + cls + '">' + (diff>=0?'+':'') + diff.toFixed(1) + '%</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── XIRR ─────────────────────────────────────────────────────────────────────
+// flows: [{amount, date}] -- negativi=uscite, positivi=entrate
+// Newton-Raphson, max 200 iterazioni
+function xirr(flows) {
+  if (!flows || flows.length < 2) return null;
+  const hasPos = flows.some(f => f.amount > 0);
+  const hasNeg = flows.some(f => f.amount < 0);
+  if (!hasPos || !hasNeg) return null;
+
+  // Ordina per data: la funzione non presuppone più che il chiamante l'abbia già fatto
+  // (tutti i chiamanti attuali ordinano già, questo è un indurimento difensivo, non un
+  // cambio di comportamento osservabile).
+  const sorted = [...flows].sort((a, b) => a.date - b.date);
+  const t0 = sorted[0].date.getTime();
+  const years = sorted.map(f => (f.date.getTime() - t0) / (365.25 * 24 * 3600 * 1000));
+
+  function npv(r) {
+    return sorted.reduce((s, f, i) => s + f.amount / Math.pow(1 + r, years[i]), 0);
+  }
+  function dnpv(r) {
+    return sorted.reduce((s, f, i) =>
+      s - years[i] * f.amount / Math.pow(1 + r, years[i] + 1), 0);
+  }
+
+  // Un singolo tentativo di Newton-Raphson da un guess iniziale r0.
+  // Ciclo, clamp e criterio di arresto IDENTICI a prima: nessuna logica nuova,
+  // solo il valore di partenza r0 è ora un parametro invece di essere fisso a 0.1.
+  function tryNewton(r0) {
+    let r = r0;
+    for (let i = 0; i < 200; i++) {
+      const n = npv(r), d = dnpv(r);
+      // Derivata nulla/non finita: il solver non può proseguire. Non è un risultato,
+      // è la fine del tentativo — la validazione finale sotto deciderà se accettarlo.
+      if (!isFinite(n) || !isFinite(d) || Math.abs(d) < 1e-12) break;
+      const rNew = r - n / d;
+      if (Math.abs(rNew - r) < 1e-8) { r = rNew; break; }
+      r = rNew;
+      if (r < -0.999) r = -0.999;
+      if (r > 100) r = 100; // clamp superiore simmetrico, difensivo
+    }
+
+    // Validazione finale: r è accettato SOLO se risolve davvero l'equazione (npv(r) ~ 0),
+    // indipendentemente da quale ramo abbia interrotto il ciclo. Questo è l'unico criterio
+    // che distingue una convergenza reale da un'uscita anticipata (derivata nulla, mancata
+    // convergenza entro 200 iterazioni, o un valore di r che non è mai stato verificato).
+    // Tolleranza relativa alla scala dei flussi, non un epsilon assoluto fisso.
+    if (!isFinite(r) || r < -1) return null;
+    const residual = npv(r);
+    const scale = sorted.reduce((s, f) => s + Math.abs(f.amount), 0) || 1;
+    if (!isFinite(residual) || Math.abs(residual) > scale * 1e-6) return null;
+    return r;
+  }
+
+  // Tentativo primario: guess 0.1, esattamente come nella versione precedente.
+  // Se converge e valida, il comportamento è bit-per-bit identico a prima.
+  const primary = tryNewton(0.1);
+  if (primary !== null) return primary * 100; // in %
+
+  // Fallback: attivato SOLO se il guess primario 0.1 non ha prodotto una radice
+  // valida. Prova guess alternativi con lo stesso identico Newton (stesso clamp,
+  // stessa tolleranza, stessa validazione). Non modifica mai un risultato già
+  // ottenuto con successo dal guess primario (vedi return sopra).
+  const fallbackGuesses = [-0.5, 0, 0.5, 1, 5];
+  let fallbackResult = null;
+  for (const g of fallbackGuesses) {
+    const rg = tryNewton(g);
+    if (rg === null) continue;
+    if (fallbackResult === null) {
+      fallbackResult = rg;
+    } else if (Math.abs(rg - fallbackResult) > 1e-6) {
+      // Guess diversi convergono a radici diverse: ambiguità finanziaria non
+      // risolvibile automaticamente. Meglio null che una scelta arbitraria.
+      return null;
+    }
+  }
+  return fallbackResult === null ? null : fallbackResult * 100; // in %
+}
+function renderOpHistory() {
+  const manualOps = operations.filter(o => !o.fromImport);
+  const hist = document.getElementById('opHistory');
+  const body = document.getElementById('opBody');
+  if (!manualOps.length) { hist.style.display = 'none'; return; }
+  hist.style.display = 'block';
+  body.innerHTML = manualOps.slice().reverse().map((o,i) => {
+    const plReal = o.tipo === 'V' ? (o.qty * o.price - (o.comm||0)) - (o.costBasis||0) : null;
+    const plHtml = plReal !== null
+      ? `<span class="${plReal>=0?'positive':'negative'}">${fmtEur(plReal)}</span>`
+      : '--';
+    return `<tr>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);font-family:'Inter',sans-serif">${new Date(o.data).toLocaleDateString('it-IT')}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);font-family:'Inter',sans-serif;font-weight:500">${o.ticker}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);text-align:center">
+        <span class="badge ${o.tipo==='A'?'badge-eq':'badge-bo'}">${o.tipo==='A'?'Acquisto':'Vendita'}</span>
+      </td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);text-align:right;font-family:'JetBrains Mono',monospace">${fmt(o.qty,4)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);text-align:right;font-family:'JetBrains Mono',monospace">${fmtEur(o.price)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red)">${o.comm ? '-'+fmtEur(o.comm) : '--'}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4);text-align:right;font-family:'JetBrains Mono',monospace">${plHtml}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid rgba(42,52,71,.4)"><button class="btn-danger" onclick="removeOp(${operations.indexOf(o)})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function removeOp(i) {
+  if (!confirm('Rimuovere questa operazione?')) return;
+  operations.splice(i, 1);
+  save();
+  renderOpHistory();
+  render();
+}
+
+// ── Fineco ticker map ─────────────────────────────────────────────────────────
+
+function onTickerChange() {
+  const val = document.getElementById('opTicker').value;
+  const newInput = document.getElementById('opTickerNew');
+  const acField  = document.getElementById('opACField');
+  newInput.style.display = val === '__nuovo__' ? 'block' : 'none';
+  acField.style.display  = val === '__nuovo__' ? 'flex'  : 'none';
+  if (val === '__nuovo__') setTimeout(() => newInput.focus(), 50);
+}
+
+function openOpForm() {
+  // popola dropdown con le posizioni aperte
+  const sel = document.getElementById('opTicker');
+  sel.innerHTML = '<option value="">-- seleziona --</option>';
+  positions.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  // opzione per nuovo titolo
+  const newOpt = document.createElement('option');
+  newOpt.value = '__nuovo__';
+  newOpt.textContent = '+ Nuovo titolo...';
+  sel.appendChild(newOpt);
+
+  document.getElementById('opBtnRow').style.display = 'none';
+  document.getElementById('opFormRow').style.display = '';
+  setTimeout(() => sel.focus(), 50);
+}
+
+function closeOpForm() {
+  document.getElementById('opFormRow').style.display = 'none';
+  document.getElementById('opBtnRow').style.display = '';
+  ['opTicker','opQty','opPrice','opComm'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const errEl = document.getElementById('opError');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function addOperation() {
+  const selVal = document.getElementById('opTicker').value;
+  const ticker = selVal === '__nuovo__'
+    ? (document.getElementById('opTickerNew') ? document.getElementById('opTickerNew').value.trim().toUpperCase() : '')
+    : selVal.trim().toUpperCase();
+  const tipo   = document.getElementById('opTipo').value;
+  const data   = document.getElementById('opData').value;
+  const qty    = parseFloat(document.getElementById('opQty').value);
+  const price  = parseFloat(document.getElementById('opPrice').value);
+  const comm   = parseFloat(document.getElementById('opComm').value) || 0;
+  const errEl  = document.getElementById('opError');
+
+  if (!ticker || !data || isNaN(qty)||qty<=0 || isNaN(price)||price<=0) {
+    errEl.textContent = 'Compila tutti i campi obbligatori.';
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+
+  const pos = positions.find(p => p.name === ticker);
+
+  if (tipo === 'A') {
+    const costBasis = qty * price + comm;
+    if (pos) {
+      const oldCost = pos.qty * pos.price;
+      pos.qty   += qty;
+      pos.price  = (oldCost + costBasis) / pos.qty;
+      pos.commTot = (pos.commTot||0) + comm;
+      if (pos.cashFlows) pos.cashFlows.push({ amount: -costBasis, date: new Date(data).toISOString() });
+    } else {
+      const ac = document.getElementById('opAC').value;
+      positions.push({
+        name: ticker, ac, qty, price, mkt: 0, commTot: comm,
+        firstDate: new Date(data).toISOString(),
+        cashFlows: [{ amount: -costBasis, date: new Date(data).toISOString() }],
+        cedole: 0, isNominal: ticker === 'BTP Futura',
+      });
+    }
+    operations.push({ ticker, tipo, data, qty, price, comm, costBasis, id: Date.now() });
+  } else {
+    if (!pos) { errEl.textContent = 'Titolo non trovato nel portafoglio.'; errEl.style.display='block'; return; }
+    const costBasis = pos.price * qty;
+    const proceeds  = qty * price - comm;
+    if (pos.cashFlows) pos.cashFlows.push({ amount: proceeds, date: new Date(data).toISOString() });
+    pos.qty -= qty;
+    pos.commTot = (pos.commTot||0) + comm;
+    operations.push({ ticker, tipo, data, qty, price, comm, costBasis, id: Date.now() });
+    if (pos.qty <= 0.0001) positions = positions.filter(p => p.name !== ticker);
+  }
+  closeOpForm();
+  render();
+}
+
+// ── Merge import con operazioni manuali ───────────────────────────────────────
+function applyManualOpsToImported(imported) {
+  const manualOps = operations.filter(o => !o.fromImport);
+  manualOps.forEach(op => {
+    const pos = imported.find(p => p.name === op.ticker);
+    if (op.tipo === 'A') {
+      if (pos) {
+        const oldCost = pos.qty * pos.price;
+        const cb = op.qty * op.price + (op.comm||0);
+        pos.qty   += op.qty;
+        pos.price  = (oldCost + cb) / pos.qty;
+        pos.commTot = (pos.commTot||0) + (op.comm||0);
+        if (pos.cashFlows) pos.cashFlows.push({ amount: -cb, date: new Date(op.data).toISOString() });
+      }
+    } else if (op.tipo === 'V' && pos) {
+      const proceeds = op.qty * op.price - (op.comm||0);
+      if (pos.cashFlows) pos.cashFlows.push({ amount: proceeds, date: new Date(op.data).toISOString() });
+      pos.qty -= op.qty;
+      pos.commTot = (pos.commTot||0) + (op.comm||0);
+      if (pos.qty <= 0.0001) imported = imported.filter(p => p.name !== op.ticker);
+    }
+  });
+  return imported;
+}
+
+const TAX_RATES = {
+  'BTP Futura': 0.125,
+  'XEON':       0.1419,
+  '_default':   0.26,
+};
+
+function taxRate(ticker) {
+  return TAX_RATES[ticker] !== undefined ? TAX_RATES[ticker] : TAX_RATES['_default'];
+}
+
+function netRealizedPL(grossPL, ticker) {
+  // minusvalenze non tassate
+  if (grossPL <= 0) return grossPL;
+  return grossPL * (1 - taxRate(ticker));
+}
+
+const FINECO_MAP = {
+  'IE00B4L5Y983': { ticker: 'SWDA',      ac: 'Azioni',       name: 'SWDA' },
+  'IE00BTJRMP35': { ticker: 'XMME',      ac: 'Azioni',       name: 'XMME' },
+  'IE00B53QG562': { ticker: 'CSEMU',     ac: 'Azioni',       name: 'CSEMU' },
+  'LU1781541252': { ticker: 'LCJP',      ac: 'Azioni',       name: 'LCJP' },
+  'IE0006WW1TQ4': { ticker: 'EXUS',      ac: 'Azioni',       name: 'EXUS' },
+  'LU0290358497': { ticker: 'XEON',      ac: 'Liquidità',    name: 'XEON' },
+  'LU0290357176': { ticker: 'X57E',      ac: 'Obbligazioni', name: 'X57E' },
+  'LU1287023003': { ticker: 'EM57',      ac: 'Obbligazioni', name: 'EM57' },
+  'FR0013416716': { ticker: 'GOLD',      ac: 'Oro',          name: 'GOLD' },
+  'IT0005442089': { ticker: 'BTP Futura', ac: 'Obbligazioni', name: 'BTP Futura', isNominal: true },
+  'IT0005442097': { ticker: 'BTP Futura', ac: 'Obbligazioni', name: 'BTP Futura', sellOf: 'IT0005442089' },
+};
+
+// titoli sconosciuti classificati manualmente in passato (persistiti, così non vengono richiesti di nuovo
+// e non generano posizioni duplicate con un nome diverso ad ogni sessione)
+let customSecurities = JSON.parse(localStorage.getItem('pfCustomSecurities') || '{}');
+Object.assign(FINECO_MAP, customSecurities);
+
+let importedData = [];
+
+function parseDate(str) {
+  if (!str) return null;
+  const parts = str.split('/');
+  if (parts.length === 3) return new Date(+parts[2], +parts[1]-1, +parts[0]);
+  return new Date(str);
+}
+
+// Legge (se presente) l'operazione di sottoscrizione BTP Futura 2021 da localStorage,
+// come alternativa al valore precedentemente hardcoded nel codice sorgente pubblico.
+// Restituisce null (nessuna iniezione, MAI un valore inventato) se la chiave non esiste
+// o contiene un JSON malformato/incompleto -- non solleva mai un'eccezione che possa
+// interrompere l'import dell'intero file Fineco.
+function getBtpFuturaSeedOp() {
+  try {
+    const raw = localStorage.getItem('pfBtpFuturaSeedOp');
+    if (!raw) return null;
+    const seed = JSON.parse(raw);
+    if (!seed || !(seed.qty > 0) || !(seed.price > 0) || !seed.date) return null;
+    const parts = String(seed.date).split('-').map(Number);
+    if (parts.length !== 3 || parts.some(p => !p && p !== 0)) return null;
+    const [y, m, d] = parts;
+    return {
+      segno: 'A',
+      qty: seed.qty,
+      price: seed.price,
+      comm: seed.comm || 0,
+      date: new Date(y, m - 1, d), // stessa identica costruzione locale del valore che sostituisce
+      desc: seed.desc || 'Sottoscrizione BTP Futura (collocamento)',
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const myImportToken = ++importToken; // catturato subito, in modo sincrono
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (myImportToken !== importToken) return; // superato da una selezione di file più recente
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // find header row (contains "Operazione" or "Data valuta")
+      let hIdx = rows.findIndex(r => r.some(c => String(c).includes('Data valuta') || String(c).includes('Operazione')));
+      if (hIdx < 0) hIdx = rows.findIndex(r => r.some(c => String(c).includes('Titolo')));
+      if (hIdx < 0) { alert('Formato non riconosciuto. Assicurati di usare l\'export movimenti di Fineco.'); return; }
+
+      const headers = rows[hIdx].map(h => String(h).trim());
+      const col = name => headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+      importWarnings = [];
+
+      const cDate    = 0;
+      const cDesc    = col('Descrizione');
+      const cIsin    = col('Isin');
+      const cSegno   = col('Segno');
+      const cQty     = col('Quantita');
+      const cPrezzo  = col('Prezzo');
+      // commissioni: prova più varianti del nome colonna
+      const cComm    = col('Commissioni amministrato') >= 0 ? col('Commissioni amministrato')
+                     : col('Commissioni amm')          >= 0 ? col('Commissioni amm')
+                     : col('Commissioni')              >= 0 ? col('Commissioni')
+                     : headers.length - 1; // ultima colonna come fallback
+      const cTitolo  = col('Titolo');
+      const cCtv     = col('Controvalore');
+
+      // aggregate by ISIN (operazioni lette da QUESTO file)
+      const byIsin = {};
+
+      // Pre-inizializza BTP Futura: l'acquisto 2021 non è nell'export Fineco. I valori
+      // (quantità, prezzo, data) sono un dato personale e NON sono più scritti qui nel
+      // codice: vengono letti da localStorage tramite getBtpFuturaSeedOp() (vedi sotto).
+      // Se il seed non è presente, l'ISIN semplicemente non riceve alcuna pre-iniezione
+      // -- nessun valore viene mai inventato. Il meccanismo di deduplicazione per firma
+      // (reconcileByCount, invariato) rende questa iniezione idempotente: se l'operazione
+      // è già presente in pfImportedOps da un import precedente, non viene mai duplicata.
+      const btpSeedOp = getBtpFuturaSeedOp();
+      if (btpSeedOp) {
+        byIsin['IT0005442089'] = { ops: [btpSeedOp] };
+      }
+
+      // cedole di QUESTO file, come eventi singoli datati (servono per il dedup tra più import)
+      const cedoleEventsThisFile = {};
+
+      for (let i = hIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        const isin = String(r[cIsin] || '').trim();
+        const desc = String(r[cDesc] || '').trim();
+        if (!isin) continue;
+
+        if (desc === 'Stacco Cedole') {
+          const val = parseFloat(String(r[cCtv] || '0').replace(',','.')) || 0;
+          const date = parseDate(String(r[cDate]));
+          if (!cedoleEventsThisFile[isin]) cedoleEventsThisFile[isin] = [];
+          cedoleEventsThisFile[isin].push({ date, amount: Math.abs(val) });
+          continue;
+        }
+
+        const isinInfo = FINECO_MAP[isin];
+        const isinKey = (isinInfo && isinInfo.sellOf) ? isinInfo.sellOf : isin;
+        let segno = String(r[cSegno] || '').trim().toUpperCase();
+        let qty   = parseFloat(String(r[cQty]).replace(',','.')) || 0;
+        const price = parseFloat(String(r[cPrezzo]).replace(',','.')) || 0;
+        const comm  = parseFloat(String(r[cComm]).replace(',','.')) || 0;
+        const date  = parseDate(String(r[cDate]));
+
+        // BTP: Fineco esprime qty in valore nominale (1 quota = 1000 nominale)
+        if (isinInfo && isinInfo.isNominal) qty = qty / 1000;
+        if (isinInfo && isinInfo.sellOf) {
+          // sellOf eredita isNominal dal parent
+          const parentInfo = FINECO_MAP[isinInfo.sellOf];
+          if (parentInfo && parentInfo.isNominal) qty = qty / 1000;
+          segno = 'V';
+        } else if (!segno || (segno !== 'A' && segno !== 'V')) {
+          const ctv = parseFloat(String(r[cCtv] || '0').replace(',','.')) || 0;
+          segno = ctv >= 0 ? 'A' : 'V';
+        }
+        if (!byIsin[isinKey]) byIsin[isinKey] = { ops: [] };
+        byIsin[isinKey].ops.push({ segno, qty, price, comm, date, desc });
+      }
+
+      // Unisci con lo storico già salvato tramite RICONCILIAZIONE PER CONTEGGIO (non presenza/assenza):
+      // nessuna colonna Fineco fornisce un ID univoco di operazione (verificato: 15 colonne, nessuna
+      // è un identificativo), quindi due operazioni realmente distinte possono avere firma identica
+      // (stesso ISIN, data, segno, quantità, prezzo, commissione). Il conteggio per firma distingue:
+      // - stesso file reimportato: conteggio invariato → zero aggiunte
+      // - due operazioni realmente identiche nello stesso file: conteggio 2 vs storico 0 → entrambe aggiunte
+      // - copertura crescente tra due file: si aggiunge solo la differenza in eccesso
+      const opSig = (isin, op) => [isin, op.date.toISOString(), op.segno, op.qty, op.price, op.comm].join('|');
+      const cedolaSig = (isin, c) => [isin, c.date.toISOString(), c.amount].join('|');
+
+      function countBySig(arr, sigFn) {
+        const m = new Map();
+        arr.forEach(x => { const k = sigFn(x); m.set(k, (m.get(k) || 0) + 1); });
+        return m;
+      }
+
+      function reconcileByCount(existingArr, newArr, sigFn, isin, label) {
+        const existingCounts = countBySig(existingArr, sigFn);
+        const grouped = new Map(); // firma -> [oggetti], nell'ordine di apparizione nel file
+        newArr.forEach(x => {
+          const k = sigFn(x);
+          if (!grouped.has(k)) grouped.set(k, []);
+          grouped.get(k).push(x);
+        });
+        const added = [];
+        grouped.forEach((items, sig) => {
+          if (items.length > 1) {
+            importWarnings.push(`${label} ${isin}: ${items.length} righe con parametri identici nello stesso file in data ${items[0].date.toLocaleDateString('it-IT')} — mantenute come operazioni distinte.`);
+          }
+          const already = existingCounts.get(sig) || 0;
+          const toAdd = Math.max(0, items.length - already);
+          for (let i = 0; i < toAdd; i++) added.push(items[i]);
+        });
+        return added;
+      }
+
+      const newOpsThisImportByIsin = {};
+      Object.keys(byIsin).forEach(isin => {
+        if (!importedOpsStore[isin]) importedOpsStore[isin] = { ops: [], cedole: [] };
+        const toAdd = reconcileByCount(importedOpsStore[isin].ops, byIsin[isin].ops, op => opSig(isin, op), isin, 'Operazioni');
+        importedOpsStore[isin].ops.push(...toAdd);
+        newOpsThisImportByIsin[isin] = toAdd;
+      });
+      Object.keys(cedoleEventsThisFile).forEach(isin => {
+        if (!importedOpsStore[isin]) importedOpsStore[isin] = { ops: [], cedole: [] };
+        const toAdd = reconcileByCount(importedOpsStore[isin].cedole, cedoleEventsThisFile[isin], c => cedolaSig(isin, c), isin, 'Cedole');
+        importedOpsStore[isin].cedole.push(...toAdd);
+      });
+
+      // Avviso: stesso ISIN, stessa data, presenti sia acquisti che vendite — Fineco non esporta l'ora,
+      // quindi l'ordine reale tra loro non è ricostruibile. Applichiamo la convenzione dichiarata
+      // "acquisti prima delle vendite" (vedi ordinamento più sotto), ma segnaliamo il caso.
+      // Limitato alle date su cui QUESTO import ha realmente aggiunto qualcosa di nuovo, altrimenti
+      // lo stesso avviso ricomparirebbe ad ogni futuro import che tocchi lo stesso titolo, anche per
+      // operazioni scollegate da quella data (rumore permanente, "alert fatigue").
+      Object.keys(byIsin).forEach(isin => {
+        const newOps = newOpsThisImportByIsin[isin] || [];
+        if (!newOps.length) return; // nessuna operazione realmente nuova per questo isin in questo import
+        const newDates = new Set(newOps.map(op => op.date.toLocaleDateString('it-IT')));
+        const byDate = new Map();
+        (importedOpsStore[isin] ? importedOpsStore[isin].ops : []).forEach(op => {
+          const d = op.date.toLocaleDateString('it-IT');
+          if (!byDate.has(d)) byDate.set(d, new Set());
+          byDate.get(d).add(op.segno);
+        });
+        newDates.forEach(d => {
+          const segni = byDate.get(d);
+          if (segni && segni.has('A') && segni.has('V')) {
+            importWarnings.push(`${isin}: acquisto e vendita nello stesso giorno (${d}) — Fineco non esporta l'ora, applicata convenzione "acquisti prima delle vendite" (potrebbe non riflettere l'ordine reale).`);
+          }
+        });
+      });
+      try {
+        localStorage.setItem('pfImportedOps', JSON.stringify(importedOpsStore));
+      } catch(e) {
+        importWarnings.push('Impossibile salvare i dati nel browser. Le modifiche resteranno valide solo fino al refresh della pagina.');
+      }
+
+      // calculate per ISIN
+      const today = new Date();
+      importedData = [];
+
+      Object.keys({ ...byIsin, ...cedoleEventsThisFile }).forEach(isin => {
+        const data = importedOpsStore[isin]; // storico COMPLETO accumulato (non solo questo file)
+        const info = FINECO_MAP[isin];
+        // usa sempre il nome dalla mappa se disponibile, altrimenti colonna Titolo
+        const nomeFile = String(rows.slice(hIdx+1).find(r => String(r[cIsin]).trim() === isin)?.[cTitolo] || isin);
+        const nome = info ? info.name : nomeFile;
+
+        let qtyNet = 0, costTot = 0, commTot = 0;
+        let firstDate = null;
+        const isNominal = info ? (info.isNominal || false) : false;
+        const cedoleTotal = (data.cedole || []).reduce((s,c) => s + c.amount, 0);
+
+        // sort by date asc
+        // ordinamento: per data crescente; a parità di data, acquisti prima delle vendite
+        // (convenzione dichiarata — Fineco non esporta l'ora, quindi l'ordine reale tra operazioni
+        // dello stesso giorno non è ricostruibile; vedi warning generato più sopra per questo caso)
+        data.ops.sort((a,b) => a.date - b.date || (a.segno === b.segno ? 0 : (a.segno === 'A' ? -1 : 1)));
+
+        data.ops.forEach(op => {
+          if (op.segno === 'A') {
+            if (qtyNet <= 0.0001) firstDate = op.date; // riapertura posizione o primo acquisto
+            costTot += op.qty * op.price + op.comm;
+            qtyNet  += op.qty;
+            commTot += op.comm;
+          } else if (op.segno === 'V') {
+            // Costo medio ponderato (metodo Fineco per ETF/OICR)
+            const avgCostPerUnit = qtyNet > 0 ? costTot / qtyNet : 0;
+            const costOfSold = op.qty * avgCostPerUnit;
+            costTot -= costOfSold;
+            qtyNet  -= op.qty;
+            commTot += op.comm;
+            // per isNominal (BTP): il prezzo nel file Fineco è in % → moltiplica per 10
+            // prezzo effettivo di vendita = prezzo di esecuzione + commissione/quantità (verificato su dati reali Fineco)
+            const sellPrice   = (isNominal ? op.price * 10 : op.price) + (op.qty > 0 ? op.comm / op.qty : 0);
+            const proceeds    = op.qty * sellPrice;
+            // FIX (Bug A): costOfSold è ancora nella scala "grezza" (senza ×10) di costTot/avgCostPerUnit,
+            // mentre proceeds è già in euro reali (×10 applicato sopra per isNominal). Prima di confrontarli
+            // per il calcolo di plus/minusvalenza, costOfSold va portato nella STESSA scala economica di proceeds.
+            const costOfSoldEconomic = isNominal ? costOfSold * 10 : costOfSold;
+            const taxableGain = proceeds - costOfSoldEconomic;
+            const tax = taxableGain > 0 ? taxableGain * taxRate(info ? info.ticker : nome) : 0;
+            op.realizedPL      = proceeds - costOfSoldEconomic - tax;
+            op.realizedPLgross = proceeds - costOfSoldEconomic;
+            if (qtyNet <= 0.0001) firstDate = null; // posizione chiusa
+          }
+        });
+
+        // qtyNet <= 0.0001: posizione completamente chiusa. Non si scarta più il record:
+        // viene comunque costruito e inserito in importedData, marcato closed:true, con
+        // qty forzata a 0 esatto (mai il residuo numerico di qtyNet). Questo evita che il
+        // realizedPL/cashFlow di chiusura vada perso e permette al merge in applyImport()
+        // di sostituire correttamente una eventuale entry stantia in positions.
+        const closed = qtyNet <= 0.0001;
+
+        // avgPrice resta nella stessa scala "grezza" (% nominale) di costTot/costOfSold, usata
+        // coerentemente da tutto il resto del codice (render riga, totalCost, display "% nom.").
+        // Prima (FIX Bug A pre-esistente) veniva applicata qui una /10 pensata per compensare un
+        // prezzo pre-iniettato espresso in una scala diversa (x10) rispetto alla % nominale; una
+        // volta riportato quel prezzo alla scala corretta, la /10 è diventata essa stessa la causa
+        // del disallineamento di scala nel costo residuo — va quindi rimossa.
+        let avgPrice = qtyNet > 0 ? costTot / qtyNet : 0;
+
+        // cashflows in euro reali (già corretti perché qty*price è in euro)
+        const cashFlows = [
+          ...data.ops.map(op => {
+            const opPrice = isNominal ? op.price * 10 : op.price;
+            return {
+              amount: op.segno === 'A' ? -(op.qty * opPrice + op.comm) : (op.qty * opPrice - op.comm),
+              date:   op.date.toISOString()
+            };
+          }),
+          ...(cedoleTotal ? [{ amount: cedoleTotal, date: new Date().toISOString() }] : []),
+        ];
+
+        const years = firstDate ? (today - firstDate) / (365.25 * 24 * 3600 * 1000) : 0;
+
+        const ticker = info ? info.ticker : nome;
+        // Le cedole nell'export Fineco sono nette (ritenuta già applicata alla fonte —
+        // verificato su dati reali BTP Futura: gli importi netti coincidono al centesimo
+        // con lo schema cedolare ufficiale MEF, applicando l'aliquota del titolo). Il
+        // campo "lordo" deve mostrare l'importo PRE-tassazione, quindi le cedole vanno
+        // riportate al lordo con la stessa aliquota già usata per le vendite dello
+        // stesso titolo — non un nuovo criterio fiscale, solo applicato coerentemente.
+        const cedoleTotalGross = cedoleTotal / (1 - taxRate(ticker));
+        const realizedPLgross = data.ops
+          .filter(op => op.segno === 'V')
+          .reduce((s, op) => s + (op.realizedPLgross || 0), 0)
+          + cedoleTotalGross;
+        const realizedPLnet = data.ops
+          .filter(op => op.segno === 'V')
+          .reduce((s, op) => s + (op.realizedPL || 0), 0)
+          + cedoleTotal; // cedole già nette
+
+        importedData.push({
+          isin,
+          name:           nome,
+          ticker,
+          ac:             info ? info.ac : 'Azioni',
+          qty:            closed ? 0 : Math.round(qtyNet * 10000) / 10000,
+          price:          Math.round(avgPrice * 10000) / 10000,
+          mkt:            0,
+          commTot:        Math.round(commTot * 100) / 100,
+          firstDate,
+          years,
+          cedole:         cedoleTotal,
+          realizedPLgross: Math.round(realizedPLgross * 100) / 100,
+          realizedPLnet:   Math.round(realizedPLnet   * 100) / 100,
+          isNominal,
+          cashFlows,
+          closed,
+        });
+      });
+
+      renderImportTable();
+
+      // controlla se ci sono ISIN sconosciuti
+      unknownEtfQueue = importedData
+        .filter(d => !FINECO_MAP[d.isin])
+        .map(d => ({ isin: d.isin, data: d }));
+      if (unknownEtfQueue.length) showNextUnknownEtf();
+    } catch(err) {
+      alert('Errore nella lettura del file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderImportTable() {
+  if (!importedData.length) return;
+  const body = document.getElementById('importBody');
+  body.innerHTML = importedData.map((d,i) => {
+    const cedoleHtml = d.cedole ? ` <span style="color:var(--green);font-size:10px">cedole: +${fmtEur(d.cedole)}</span>` : '';
+    const dataStr = d.firstDate ? d.firstDate.toLocaleDateString('it-IT') : '--';
+    return `<tr>
+      <td>${d.ticker}</td>
+      <td>${d.ac}</td>
+      <td>${fmt(d.qty, 4)}</td>
+      <td>${fmtEur(d.price)}</td>
+      <td>${fmtEur(d.commTot)}${cedoleHtml}</td>
+      <td>${dataStr}</td>
+      <td style="color:var(--text-dim); font-size:10px;">inserire P.Mkt</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('importSummary').textContent =
+    `${importedData.length} posizioni trovate - prezzo di mercato da aggiornare dopo l'import`;
+  const qualityEl = document.getElementById('importQuality');
+  if (importWarnings.length) {
+    qualityEl.style.display = 'block';
+    qualityEl.innerHTML = `<div style="color:var(--yellow, #d4a72c); font-weight:600; margin-bottom:4px;">⚠ Qualità import Fineco — ${importWarnings.length} avviso${importWarnings.length>1?'i':''}</div>`
+      + importWarnings.map(w => `<div style="color:var(--text-dim); margin-top:2px;">• ${w}</div>`).join('');
+  } else {
+    qualityEl.style.display = 'block';
+    qualityEl.innerHTML = `<div style="color:var(--green, #4caf6d);">✓ Qualità import Fineco — nessun avviso</div>`;
+  }
+  document.getElementById('importResult').style.display = 'block';
+}
+
+function applyImport() {
+  if (!importedData.length) return;
+  // keep existing mkt prices — matching per isin: name è solo l'etichetta visualizzata/
+  // modificabile dall'utente (saveEdit), non l'identità del titolo.
+  importedData.forEach(d => {
+    const existing = positions.find(p => p.isin === d.isin);
+    d.mkt = existing ? existing.mkt : 0;
+  });
+  let imported = importedData.map(d => ({
+    isin: d.isin, ticker: d.ticker,
+    name: d.name, ac: d.ac, qty: d.qty, price: d.price, mkt: d.mkt,
+    commTot: d.commTot, firstDate: d.firstDate ? d.firstDate.toISOString() : null,
+    cedole: d.cedole,
+    realizedPLgross: d.realizedPLgross || 0,
+    realizedPLnet:   d.realizedPLnet   || 0,
+    cashFlows: d.cashFlows || [], isNominal: d.isNominal || false,
+    closed: d.closed || false,
+  }));
+
+  // applica operazioni manuali aggiunte dopo l'ultimo import
+  imported = applyManualOpsToImported(imported);
+  // merge per isin: aggiorna/aggiunge le posizioni del nuovo import in base all'identità
+  // reale del titolo, non all'etichetta. Le posizioni senza isin (create manualmente via
+  // addRow) non corrispondono mai a importedIsins e restano quindi sempre invariate.
+  const importedIsins = new Set(imported.map(p => p.isin));
+  positions = [...positions.filter(p => !importedIsins.has(p.isin)), ...imported];
+
+  // aggiorna storico: mantieni operazioni manuali, sostituisci quelle da import
+  const lastImport = localStorage.getItem('pfLastImport');
+  const manualOps = operations.filter(o => !o.fromImport);
+  const importOps = importedData.flatMap(d =>
+    (d.cashFlows||[]).map(f => ({
+      ticker: d.ticker, tipo: f.amount < 0 ? 'A' : 'V',
+      data: f.date, qty: 0, price: 0, comm: 0,
+      costBasis: 0, fromImport: true, id: Math.random()
+    }))
+  );
+  operations = [...manualOps, ...importOps];
+  localStorage.setItem('pfLastImport', new Date().toISOString());
+  clearImport();
+  render();
+  document.getElementById('holdTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearImport() {
+  importedData = [];
+  document.getElementById('importResult').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+}
+
+// ── timestamp ─────────────────────────────────────────────────────────────────
+document.getElementById('ts').textContent = new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+
+render();
+
+// ── Aggiornamento automatico prezzi (prices.json, generato da GitHub Action) ───
+// Principio non negoziabile: prices.json è una fonte ADDITIVA, mai sostitutiva di
+// localStorage. Se è irraggiungibile, invalido, o il fetch fallisce per qualunque
+// motivo, la dashboard resta interamente funzionante con gli ultimi positions[].mkt
+// già presenti in localStorage -- questa funzione non tocca mai il ledger fiscale
+// (pfImportedOps), PMC, XIRR, P/L o tassazione: scrive solo p.mkt per gli ISIN
+// coperti, esattamente come farebbe un inserimento manuale in saveEdit().
+function loadPriceMeta() {
+  try {
+    return JSON.parse(localStorage.getItem('pfPriceMeta') || 'null');
+  } catch (e) {
+    return null;
+  }
+}
+
+function savePriceMeta(meta) {
+  try { localStorage.setItem('pfPriceMeta', JSON.stringify(meta)); } catch (e) {}
+}
+
+function renderPriceStatus(meta) {
+  const el = document.getElementById('priceStatus');
+  if (!el) return;
+  if (!meta || !meta.sessionDate) { el.textContent = ''; return; }
+  const dateStr = new Date(meta.sessionDate + 'T00:00:00').toLocaleDateString('it-IT');
+  let txt = 'Prezzi al ' + dateStr;
+  if (meta.reachable === false) txt += ' (verifica fallita)';
+  el.textContent = txt;
+}
+
+// ISIN effettivamente coperti dalla pipeline automatica Yahoo -- stessa lista
+// concettuale di TICKERS in scripts/update-prices.js, tenuta qui separata per
+// non creare una dipendenza tra i due file (vanno mantenute allineate a mano se
+// cambia l'elenco degli ETF automatizzati). Serve solo a distinguere "questo
+// titolo doveva avere un prezzo e non ce l'ha" da "questo titolo è giustamente
+// fuori scope" (BTP Futura, posizioni manuali) quando l'ISIN manca da entries.
+const AUTO_PRICE_ISINS = new Set([
+  'IE00B4L5Y983', 'IE00BTJRMP35', 'IE00B53QG562', 'LU1781541252',
+  'LU0290358497', 'LU0290357176', 'LU1287023003',
+  'IE0006WW1TQ4', 'FR0013416716',
+]);
+
+// Warning sempre visibile in UI (non un title/tooltip, inutilizzabile su mobile):
+// elenca esplicitamente i titoli il cui prezzo NON è stato aggiornato in questo
+// giro, che siano 'stale' (close vecchio, non applicato), 'error' (se mai
+// comparisse esplicitamente) o assenti da prices.json per un errore di fetch mai
+// riuscito -- ma solo per gli ISIN effettivamente coperti dalla pipeline: BTP
+// Futura e le posizioni manuali non generano mai un warning. mkt non viene mai
+// toccato per nessuno di questi casi.
+function renderStaleWarning(meta) {
+  const el = document.getElementById('priceStaleWarn');
+  if (!el) return;
+  if (!meta || !meta.staleNames || !meta.staleNames.length) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.textContent = '⚠️ Prezzi non aggiornati: ' + meta.staleNames.join(', ');
+  el.style.display = 'block';
+}
+
+async function applyAutoPrices() {
+  // mostra subito l'ultimo stato noto (da localStorage), prima ancora del fetch,
+  // così l'informazione è visibile anche offline o a connessione lenta
+  let meta = loadPriceMeta();
+  renderPriceStatus(meta);
+  renderStaleWarning(meta);
+
+  let data;
+  try {
+    const res = await fetch('./prices.json?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    data = await res.json();
+    if (!data || typeof data.entries !== 'object' || data.entries === null) {
+      throw new Error('Formato prices.json non valido');
+    }
+  } catch (err) {
+    // prices.json irraggiungibile / invalido: nessuna modifica a positions.
+    // Segnala solo che l'ultima verifica non è riuscita, mantenendo visibile
+    // l'ultimo aggiornamento riuscito in precedenza (se esiste).
+    if (meta) { meta = { ...meta, reachable: false }; }
+    renderPriceStatus(meta);
+    renderStaleWarning(meta);
+    return;
+  }
+
+  let appliedCount = 0;
+  const staleNames = [];
+  // Se in questo giro non arriva nessun prezzo 'ok' nuovo, la data mostrata resta
+  // quella dell'ultimo aggiornamento realmente applicato in precedenza (non va
+  // azzerata solo perché oggi tutti i titoli sono stale).
+  let latestSessionDate = meta ? meta.sessionDate : null;
+
+  positions.forEach(p => {
+    if (p.closed || !p.isin) return; // posizioni manuali (senza isin) o chiuse: mai toccate
+    const entry = data.entries[p.isin];
+    if (!entry) {
+      // ISIN assente da entries: quasi sempre un fetch mai riuscito per questo
+      // titolo (update-prices.js non scrive un prezzo nuovo in caso di errore).
+      // Segnalato SOLO se il titolo è realmente coperto dalla pipeline -- BTP
+      // Futura e le posizioni manuali non devono generare un falso allarme.
+      if (AUTO_PRICE_ISINS.has(p.isin)) staleNames.push(p.name);
+      return;
+    }
+    if (!Number.isFinite(entry.close) || entry.close <= 0) {
+      // Difesa in profondità: entry presente ma close non valido. Non dovrebbe
+      // mai accadere (update-prices.js valida prima di scrivere), ma se
+      // accadesse va trattato come dato non applicabile, non ignorato in silenzio.
+      staleNames.push(p.name);
+      return;
+    }
+
+    if (entry.status === 'ok') {
+      // Unico status che può scrivere mkt: close valido E di sessione recente.
+      p.mkt = entry.close;
+      appliedCount++;
+      if (!latestSessionDate || entry.session_date > latestSessionDate) latestSessionDate = entry.session_date;
+    } else {
+      // 'stale' (close valido ma vecchio) o 'error' esplicito (se mai comparisse):
+      // stesso trattamento, mkt NON viene toccato, solo segnalato.
+      staleNames.push(p.name);
+    }
+  });
+
+  meta = {
+    appliedAt: new Date().toISOString(),
+    sessionDate: latestSessionDate,
+    staleNames,
+    reachable: true,
+  };
+  savePriceMeta(meta);
+
+  if (appliedCount > 0) {
+    save();
+    render();
+  }
+  renderPriceStatus(meta);
+  renderStaleWarning(meta);
+}
+
+applyAutoPrices();
+</script>
+
+<!-- Registrazione PWA: blocco isolato, nessuna variabile/funzione condivisa
+     con lo script della dashboard sopra. Path relativo: funziona a qualunque
+     sottopercorso di pubblicazione (GitHub Pages, Cloudflare Pages, dominio
+     personale). -->
+<script>
+(function () {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('service-worker.js', { scope: './' })
+        .catch(function (err) { console.warn('Registrazione service worker fallita:', err); });
+    });
+  }
+})();
+</script>
+</body>
+</html>

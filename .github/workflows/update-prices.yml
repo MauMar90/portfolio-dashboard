@@ -1,0 +1,55 @@
+name: Aggiorna prezzi ETF (Yahoo Finance)
+
+on:
+  schedule:
+    # 17:00 UTC, lun-ven. Copre la chiusura di Borsa Italiana (17:30 locale) sia
+    # in CET (17:30 = 16:30 UTC) sia in CEST (17:30 = 15:30 UTC): 17:00 UTC è
+    # sempre successivo a entrambi, quindi non serve gestire il cambio ora legale
+    # qui -- lo si gestisce invece dentro lo script, sul lato "sessione di Milano".
+    - cron: '0 17 * * 1-5'
+  # Consente di lanciare l'aggiornamento manualmente da GitHub (tab Actions),
+  # utile per test o per un recupero immediato dopo un fallimento.
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Aggiorna prices.json
+        id: update-prices
+        run: node scripts/update-prices.js
+
+      - name: Commit se prices.json è cambiato in modo sostanziale
+        # Il criterio non è più "git diff sul file intero" (che includerebbe
+        # generated_at/fetched_at, diversi ad ogni run anche a prezzi identici):
+        # è lo script stesso a determinare se ISIN/ticker/close/currency/exchange/
+        # session_date/status/note/warnings sono effettivamente cambiati.
+        if: steps.update-prices.outputs.substantive_change == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          git commit -m "chore: aggiorna prices.json [skip ci]"
+          # Riallineamento esplicito con l'ultima versione remota di main prima del
+          # push: questo job è l'unico a scrivere prices.json, quindi nel peggiore
+          # dei casi il rebase si riallinea con se stesso -- nessun rischio reale
+          # di perdita di dati. Evita di scoprire un disallineamento solo al
+          # momento del push (che altrimenti fallirebbe con "fetch first").
+          git fetch origin main
+          git rebase origin/main
+          git push

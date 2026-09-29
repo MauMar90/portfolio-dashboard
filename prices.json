@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-09-25T20:20:52.385Z",
+  "entries": {
+    "IE00B4L5Y983": {
+      "ticker": "SWDA.MI",
+      "close": 128.9199981689453,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:51.529Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "IE00BTJRMP35": {
+      "ticker": "XMME.MI",
+      "close": 83.24800109863281,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-23",
+      "fetched_at": "2026-09-25T20:20:51.768Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "IE00B53QG562": {
+      "ticker": "CSEMU.MI",
+      "close": 244.38999938964844,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:51.858Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "LU1781541252": {
+      "ticker": "LCJP.MI",
+      "close": 23.7450008392334,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:51.940Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "LU0290358497": {
+      "ticker": "XEON.MI",
+      "close": 150.31419372558594,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:52.026Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "LU0290357176": {
+      "ticker": "X57E.MI",
+      "close": 227.9199981689453,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:52.112Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "LU1287023003": {
+      "ticker": "EM57.MI",
+      "close": 155.5,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:52.196Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "IE0006WW1TQ4": {
+      "ticker": "EXUS.MI",
+      "close": 40.03499984741211,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:52.294Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    },
+    "FR0013416716": {
+      "ticker": "GOLD.MI",
+      "close": 148.83999633789062,
+      "currency": "EUR",
+      "exchange": "MIL",
+      "session_date": "2026-09-25",
+      "fetched_at": "2026-09-25T20:20:52.385Z",
+      "source": "yahoo_chart",
+      "status": "ok"
+    }
+  },
+  "warnings": []
+}
