@@ -496,6 +496,7 @@
   <div class="kpi"><div class="kpi-label">Valore Portafoglio</div><div class="kpi-value" id="kTotal">—</div></div>
   <div class="kpi"><div class="kpi-label">Capitale Investito</div><div class="kpi-value" id="kCost">—</div></div>
   <div class="kpi"><div class="kpi-label">P/L Non Realizzato</div><div class="kpi-value" id="kPL">—</div></div>
+  <div class="kpi"><div class="kpi-label">P/L % Lordo</div><div class="kpi-value" id="kPLpct">—</div><div id="kPLpctWarn" style="display:none; font-size:11px; color:var(--gold); margin-top:6px;"></div></div>
   <div class="kpi"><div class="kpi-label">P/L Realizzato</div><div class="kpi-value" id="kPLreal">—</div></div>
   <div class="kpi"><div class="kpi-label">P/L Totale</div><div class="kpi-value" id="kPLtot">—</div></div>
   <div class="kpi"><div class="kpi-label">XIRR Portafoglio</div><div class="kpi-value" id="kCAGR">—</div></div>
@@ -969,6 +970,25 @@ function render() {
   const plEl = document.getElementById('kPL');
   plEl.textContent = fmtEur(unrealPL);
   plEl.className = 'kpi-value ' + (unrealPL>0?'positive':unrealPL<0?'negative':'');
+
+  // P/L % lordo (posizioni aperte): stessi euro di kPL/kCost, aggregati prima di dividere
+  // (mai media dei P/L% di riga). Il costo di carico è il PMC, già senza commissioni per gli
+  // ETF (vedi handleFile). Prezzo di mercato 0 = dato mancante, non perdita del 100%: KPI non
+  // disponibile con avviso visibile, senza escludere la posizione in silenzio.
+  const plPctEl   = document.getElementById('kPLpct');
+  const plPctWarn = document.getElementById('kPLpctWarn');
+  const noMkt = openPositions.filter(p => !(p.mkt > 0)).map(p => p.name);
+  if (noMkt.length) {
+    plPctEl.textContent = '—';
+    plPctEl.className = 'kpi-value';
+    plPctWarn.textContent = '⚠ Non disponibile: manca il prezzo di mercato di ' + noMkt.join(', ');
+    plPctWarn.style.display = 'block';
+  } else {
+    plPctEl.textContent = totalCost ? fmtPct(unrealPL / totalCost * 100) : '—';
+    plPctEl.className = 'kpi-value ' + (unrealPL>0?'positive':unrealPL<0?'negative':'');
+    plPctWarn.textContent = '';
+    plPctWarn.style.display = 'none';
+  }
 
   // P/L realizzato lordo e netto fiscale
   const realPLgross = positions.reduce((s,p) => s + (p.realizedPLgross||0), 0)
