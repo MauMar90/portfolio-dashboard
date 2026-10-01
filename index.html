@@ -1779,7 +1779,12 @@ function handleFile(file) {
         data.ops.forEach(op => {
           if (op.segno === 'A') {
             if (qtyNet <= 0.0001) firstDate = op.date; // riapertura posizione o primo acquisto
-            costTot += op.qty * op.price + op.comm;
+            // Convenzione export Fineco (verificata su dati reali contro il "P.zo medio di carico"
+            // Fineco): negli acquisti il Prezzo esportato include già la commissione per quota
+            // (Prezzo = esecuzione + comm/qty), quindi il costo di esecuzione è qty*price - comm.
+            // BTP (isNominal): convenzione d'acquisto non verificata e scala diversa (prezzo in %
+            // del nominale, comm in euro) -- comportamento lasciato invariato di proposito.
+            costTot += isNominal ? op.qty * op.price + op.comm : op.qty * op.price - op.comm;
             qtyNet  += op.qty;
             commTot += op.comm;
           } else if (op.segno === 'V') {
@@ -1824,8 +1829,12 @@ function handleFile(file) {
         const cashFlows = [
           ...data.ops.map(op => {
             const opPrice = isNominal ? op.price * 10 : op.price;
+            // Flusso reale = controvalore (qty × Prezzo export): la commissione è già incorporata
+            // nel Prezzo (acquisti: lordo comm; vendite: netto comm), non va applicata di nuovo.
+            // BTP (isNominal): invariato, convenzione non verificata (vedi costTot sopra).
+            const opComm = isNominal ? op.comm : 0;
             return {
-              amount: op.segno === 'A' ? -(op.qty * opPrice + op.comm) : (op.qty * opPrice - op.comm),
+              amount: op.segno === 'A' ? -(op.qty * opPrice + opComm) : (op.qty * opPrice - opComm),
               date:   op.date.toISOString()
             };
           }),
