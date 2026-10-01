@@ -1,0 +1,26 @@
+# Export Fineco e fogli di calcolo con dati reali: MAI nel repo pubblico
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*fineco*.xls
+*fineco*.xlsx
+*fineco*.csv
+movimenti*
+export*
+
+# Dati d'integrazione BTP Futura (seed sottoscrizione) e backup localStorage
+*btp*seed*
+*BtpFutura*
+pfBtpFuturaSeedOp*
+*.backup.json
+localStorage*.json
+
+# Secret / ambiente
+.env
+.env.*
+
+# Dipendenze e file locali
+node_modules/
+.DS_Store
+Thumbs.db
