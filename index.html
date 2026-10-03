@@ -521,25 +521,26 @@
     #holdTable td { padding: 0; border: none; text-align: left; font-size: 15px; }
     #holdTable tr:hover td, #holdTable tr.main-row:hover td { background: none; }
     /* Card: riga 1 = ticker + asset class (badge dentro la cella del ticker, va a capo con lui
-       se serve) e ✎ ✕ a destra; sotto, su due colonne allineate, P/L € · P/L % e poi
-       Peso · XIRR · ▶. Le due colonne valori lasciano spazio al ▶ (44px). */
+       se serve), ▶ subito a destra, ✎ ✕ in fondo a destra; sotto, su due colonne allineate,
+       P/L € · P/L % e poi Peso · XIRR. */
     #holdTable tr.main-row {
       display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
       background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
       padding: 10px 12px; margin-top: 10px;
     }
-    #holdTable .m-name { order: 1; flex: 1 1 0; min-width: 0; font-family: 'Inter', sans-serif; font-weight: 600; text-align: left !important; }
+    /* max-width lascia sempre posto in riga 1 a ▶ (44px) e ✎ ✕ (~96px) + spazi, con margine */
+    #holdTable .m-name { order: 1; flex: 0 1 auto; min-width: 0; max-width: calc(100% - 175px); font-family: 'Inter', sans-serif; font-weight: 600; text-align: left !important; }
     #holdTable .m-name .m-badge { display: inline-block; margin-left: 8px; font-weight: 400; vertical-align: middle; }
     #holdTable .m-cls  { display: none; } /* asset class mostrata accanto al ticker */
-    #holdTable .m-act  { order: 2; flex: 0 0 auto; }
-    #holdTable tr.main-row::after { content: ''; order: 3; flex-basis: 100%; height: 0; } /* a capo dopo la riga 1 */
-    #holdTable .m-pl   { order: 4; }
-    #holdTable .m-pct  { order: 5; }
-    #holdTable .m-w    { order: 6; }
-    #holdTable .m-xirr { order: 7; }
-    #holdTable .m-exp  { order: 8; flex: 0 0 44px; text-align: right; }
+    #holdTable .m-exp  { order: 2; flex: 0 0 44px; }
+    #holdTable .m-act  { order: 3; flex: 0 0 auto; margin-left: auto; }
+    #holdTable tr.main-row::after { content: ''; order: 4; flex-basis: 100%; height: 0; } /* a capo dopo la riga 1 */
+    #holdTable .m-pl   { order: 5; }
+    #holdTable .m-pct  { order: 6; }
+    #holdTable .m-w    { order: 7; }
+    #holdTable .m-xirr { order: 8; }
     #holdTable .m-pl, #holdTable .m-pct, #holdTable .m-w, #holdTable .m-xirr {
-      flex: 0 0 calc((100% - 44px - 21px) / 2); min-width: 0; overflow-wrap: anywhere;
+      flex: 0 0 calc((100% - 11px) / 2); min-width: 0; overflow-wrap: anywhere;
     }
     #holdTable .m-qty { display: none; } /* Quote nel dettaglio */
     #holdTable td[data-label]::before, #importTable td[data-label]::before {
