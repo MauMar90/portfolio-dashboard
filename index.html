@@ -504,6 +504,10 @@
     #kPLpct, #kCAGR { font-size: 24px; }
     #kPLreal { font-size: 13px !important; } /* render() lo porta a 11px inline col dettaglio lordo/imposta */
 
+    /* Target: renderTargetInputs() imposta inline una colonna per asset class (fino a 4), che
+       con 4 classi esce dallo schermo; !important serve a vincere lo stile inline. */
+    #targetGrid { grid-template-columns: 1fr 1fr !important; }
+
     /* tap target ≥ 44px; input a 16px (niente zoom automatico su iOS) */
     .expand-btn, .btn-edit, .btn-danger, .btn-save, .btn-cancel, .btn, .btn-add-inline { min-width: 44px; min-height: 44px; }
     .expand-btn { font-size: 14px; }
@@ -536,9 +540,21 @@
       letter-spacing: .06em; text-transform: uppercase;
     }
     #holdTable .m-w .pct-bar-wrap { justify-content: flex-start; }
-    #holdTable .m-w .pct-bar-bg { width: 32px; }
+    #holdTable .m-w .pct-bar-bg { display: none; } /* su mobile la barretta è troppo corta per essere leggibile: solo la % */
     #holdTable .m-w span { font-size: 13px; }
     #holdTable tr.detail-row td { border: none; }
+
+    /* Modifica posizione (✎): card con campi etichettati a tutta larghezza (stili inline vinti con !important) */
+    #holdTable tr.editing-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px;
+      margin-top: 10px; padding: 12px; border: 1px solid var(--gold-dim); border-radius: 8px; background: rgba(201,168,76,.05);
+    }
+    #holdTable tr.editing-row td { background: none; border: none; }
+    #holdTable tr.editing-row td:empty { display: none; }
+    #holdTable tr.editing-row .m-ename, #holdTable tr.editing-row .m-eprice, #holdTable tr.editing-row .m-eact { grid-column: 1 / -1; }
+    #holdTable tr.editing-row .edit-input, #holdTable tr.editing-row .edit-select { width: 100% !important; min-height: 44px; }
+    #holdTable tr.editing-row .m-eprice { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; align-items: center; font-size: 13px !important; }
+    #holdTable tr.editing-row .m-eact { display: flex; gap: 10px; }
     .detail-inner { grid-template-columns: 1fr 1fr; gap: 10px 12px; border-radius: 0 0 8px 8px; }
     .detail-inner.open { max-height: 600px; }
     .detail-cell.m-only { display: flex; }
@@ -984,15 +1000,15 @@ function render() {
     if (editingKey === p.name) {
       rows += `<tr class="editing-row">
         <td></td>
-        <td><input class="edit-input" id="eN" value="${p.name}" style="width:100px"/></td>
-        <td><select class="edit-select" id="eAC">${acSelectOptionsHtml(p.ac)}</select></td>
-        <td><input class="edit-input" id="eQty" type="number" step="any" value="${p.qty}"/></td>
-        <td colspan="3" style="color:var(--text-dim); font-size:11px; font-family:'Inter',sans-serif;">
+        <td class="m-ename" data-label="Titolo"><input class="edit-input" id="eN" value="${p.name}" style="width:100px"/></td>
+        <td data-label="Classe"><select class="edit-select" id="eAC">${acSelectOptionsHtml(p.ac)}</select></td>
+        <td data-label="Quote"><input class="edit-input" id="eQty" type="number" step="any" value="${p.qty}"/></td>
+        <td class="m-eprice" colspan="3" style="color:var(--text-dim); font-size:11px; font-family:'Inter',sans-serif;">
           P.Carico: <input class="edit-input" id="ePrice" type="number" step="any" value="${p.price}" style="width:80px"/>
           &nbsp; P.Mkt: <input class="edit-input" id="eMkt" type="number" step="any" value="${p.mkt}" style="width:105px"/>
         </td>
         <td></td>
-        <td>
+        <td class="m-eact">
           <button class="btn-save" onclick="saveEdit(${jsAttr(p.name)})">✓ Salva</button>
           <button class="btn-cancel" onclick="cancelEdit()">Annulla</button>
         </td>
