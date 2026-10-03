@@ -489,20 +489,22 @@
     header > div:last-child { flex-basis: 100%; align-items: flex-start !important; }
     #ts, #priceStatus { font-size: 12px !important; }
 
-    /* KPI: Valore a tutta larghezza, poi P/L % Lordo + XIRR, poi gli altri 4 su 2 colonne
-       (ordine per data-kpi, indipendente dalla posizione nel markup) */
+    /* KPI: Valore e Capitale Investito a tutta larghezza, poi P/L % Lordo + XIRR,
+       P/L Non Realizzato + P/L Totale, e P/L Realizzato (testo lungo) a tutta larghezza.
+       Ordine per data-kpi, indipendente dalla posizione nel markup. */
     .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; }
     .kpi { padding: 12px; min-width: 0; }
     .kpi-label { font-size: 12px; }
     .kpi-value { font-size: 17px; overflow-wrap: anywhere; }
     .kpi[data-kpi="valore"]   { grid-column: 1 / -1; order: 0; }
-    .kpi[data-kpi="plpct"]    { order: 1; }
-    .kpi[data-kpi="xirr"]     { order: 2; }
-    .kpi[data-kpi="capitale"] { order: 3; }
+    .kpi[data-kpi="capitale"] { grid-column: 1 / -1; order: 1; }
+    .kpi[data-kpi="plpct"]    { order: 2; }
+    .kpi[data-kpi="xirr"]     { order: 3; }
     .kpi[data-kpi="pl"]       { order: 4; }
-    .kpi[data-kpi="plreal"]   { order: 5; }
-    .kpi[data-kpi="pltot"]    { order: 6; }
+    .kpi[data-kpi="pltot"]    { order: 5; }
+    .kpi[data-kpi="plreal"]   { grid-column: 1 / -1; order: 6; }
     #kTotal { font-size: 30px; }
+    #kCost  { font-size: 20px; }
     #kPLpct, #kCAGR { font-size: 24px; }
     #kPLreal { font-size: 13px !important; } /* render() lo porta a 11px inline col dettaglio lordo/imposta */
 
