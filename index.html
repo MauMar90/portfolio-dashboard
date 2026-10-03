@@ -290,6 +290,8 @@
   .badge-eq  { background: rgba(88,166,255,.15); color: var(--col-eq); }
   .badge-bo  { background: rgba(201,168,76,.15); color: var(--col-bo); }
   .badge-liq { background: rgba(63,185,80,.15);  color: var(--col-liq); }
+  .badge-oro { background: rgba(240,136,62,.15); color: #f0883e; } /* stesso colore di acColor('Oro') */
+  .badge-other { background: rgba(139,148,158,.15); color: var(--text-dim); } /* asset class senza colore dedicato */
   .positive { color: var(--green); }
   .negative { color: var(--red); }
   .neutral  { color: var(--text-dim); }
@@ -518,22 +520,28 @@
     #holdTable, #holdTable tbody, #holdTable tfoot, #holdTable tr, #holdTable td { display: block; }
     #holdTable td { padding: 0; border: none; text-align: left; font-size: 15px; }
     #holdTable tr:hover td, #holdTable tr.main-row:hover td { background: none; }
+    /* Card: riga 1 = ticker + asset class (badge dentro la cella del ticker, va a capo con lui
+       se serve) e ✎ ✕ a destra; sotto, su due colonne allineate, P/L € · P/L % e poi
+       Peso · XIRR · ▶. Le due colonne valori lasciano spazio al ▶ (44px). */
     #holdTable tr.main-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-      grid-template-areas: "name name act" "cls w exp" "pl pl pct";
-      gap: 8px; align-items: center;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
       background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
       padding: 10px 12px; margin-top: 10px;
     }
-    #holdTable .m-name { grid-area: name; font-family: 'Inter', sans-serif; font-weight: 600; text-align: left !important; }
-    #holdTable .m-cls  { grid-area: cls; }
-    #holdTable .m-w    { grid-area: w; }
-    #holdTable .m-exp  { grid-area: exp; justify-self: end; }
-    #holdTable .m-act  { grid-area: act; justify-self: end; }
-    #holdTable .m-pl   { grid-area: pl; }
-    #holdTable .m-pct  { grid-area: pct; text-align: right; }
-    #holdTable .m-qty, #holdTable .m-xirr { display: none; } /* Quote nel dettaglio, XIRR già nel dettaglio */
+    #holdTable .m-name { order: 1; flex: 1 1 0; min-width: 0; font-family: 'Inter', sans-serif; font-weight: 600; text-align: left !important; }
+    #holdTable .m-name .m-badge { display: inline-block; margin-left: 8px; font-weight: 400; vertical-align: middle; }
+    #holdTable .m-cls  { display: none; } /* asset class mostrata accanto al ticker */
+    #holdTable .m-act  { order: 2; flex: 0 0 auto; }
+    #holdTable tr.main-row::after { content: ''; order: 3; flex-basis: 100%; height: 0; } /* a capo dopo la riga 1 */
+    #holdTable .m-pl   { order: 4; }
+    #holdTable .m-pct  { order: 5; }
+    #holdTable .m-w    { order: 6; }
+    #holdTable .m-xirr { order: 7; }
+    #holdTable .m-exp  { order: 8; flex: 0 0 44px; text-align: right; }
+    #holdTable .m-pl, #holdTable .m-pct, #holdTable .m-w, #holdTable .m-xirr {
+      flex: 0 0 calc((100% - 44px - 21px) / 2); min-width: 0; overflow-wrap: anywhere;
+    }
+    #holdTable .m-qty { display: none; } /* Quote nel dettaglio */
     #holdTable td[data-label]::before, #importTable td[data-label]::before {
       content: attr(data-label); display: block; margin-bottom: 2px;
       font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-dim);
@@ -541,7 +549,7 @@
     }
     #holdTable .m-w .pct-bar-wrap { justify-content: flex-start; }
     #holdTable .m-w .pct-bar-bg { display: none; } /* su mobile la barretta è troppo corta per essere leggibile: solo la % */
-    #holdTable .m-w span { font-size: 13px; }
+    #holdTable .m-w span { font-size: 15px; }
     #holdTable tr.detail-row td { border: none; }
 
     /* Modifica posizione (✎): card con campi etichettati a tutta larghezza (stili inline vinti con !important) */
@@ -943,8 +951,8 @@ const fmtEur = (n) => '€ ' + fmt(n);
 const fmtPct = (n) => (n>=0?'+':'')+fmt(n,2)+'%';
 
 function badgeHtml(ac) {
-  const map = { 'Azioni':'badge-eq','Obbligazioni':'badge-bo','Liquidità':'badge-liq' };
-  return `<span class="badge ${map[ac]||''}">${ac}</span>`;
+  const map = { 'Azioni':'badge-eq','Obbligazioni':'badge-bo','Liquidità':'badge-liq','Oro':'badge-oro' };
+  return `<span class="badge ${map[ac]||'badge-other'}">${ac}</span>`;
 }
 
 // Chiave stabile per identificare una posizione: p.name (stesso criterio già usato
@@ -1034,12 +1042,12 @@ function render() {
 
       rows += `<tr class="main-row" onclick="toggleDetail(${jsAttr(p.name)})">
         <td class="m-exp"><button class="expand-btn${isOpen?' open':''}" onclick="event.stopPropagation();toggleDetail(${jsAttr(p.name)})">▶</button></td>
-        <td class="m-name" style="text-align:left">${p.name}</td>
+        <td class="m-name" style="text-align:left">${p.name}<span class="m-only m-badge">${badgeHtml(p.ac)}</span></td>
         <td class="m-cls" style="text-align:left">${badgeHtml(p.ac)}</td>
         <td class="m-qty">${fmt(p.qty,4)}</td>
         <td class="${plClass} m-pl" data-label="P/L €">${fmtEur(pl)}</td>
         <td class="${plClass} m-pct" data-label="P/L %">${fmtPct(plPct)}</td>
-        <td class="m-xirr">${xirrHtml}</td>
+        <td class="m-xirr" data-label="XIRR">${xirrHtml}</td>
         <td class="m-w" data-label="Peso">
           <div class="pct-bar-wrap">
             <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${Math.min(weight,100)}%"></div></div>
