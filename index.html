@@ -2008,7 +2008,9 @@ function handleFile(file) {
               date:   op.date.toISOString()
             };
           }),
-          ...(cedoleTotal ? [{ amount: cedoleTotal, date: new Date().toISOString() }] : []),
+          // Una cedola = un flusso alla sua data reale di pagamento (importo netto, come incassato).
+          // Prima: un unico flusso col totale alla data di oggi, che sottostimava l'XIRR.
+          ...(data.cedole || []).map(c => ({ amount: c.amount, date: c.date.toISOString() })),
         ];
 
         const years = firstDate ? (today - firstDate) / (365.25 * 24 * 3600 * 1000) : 0;
