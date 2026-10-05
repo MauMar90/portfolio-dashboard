@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-02T21:13:46.826Z",
+  "generated_at": "2026-10-05T23:05:31.999Z",
   "entries": {
     "IE00B4L5Y983": {
       "ticker": "SWDA.MI",
@@ -7,7 +7,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.568Z",
+      "fetched_at": "2026-10-05T23:05:31.622Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -17,7 +17,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.607Z",
+      "fetched_at": "2026-10-05T23:05:31.698Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -27,7 +27,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.639Z",
+      "fetched_at": "2026-10-05T23:05:31.745Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -37,7 +37,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.669Z",
+      "fetched_at": "2026-10-05T23:05:31.783Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -47,7 +47,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.701Z",
+      "fetched_at": "2026-10-05T23:05:31.828Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -57,7 +57,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.732Z",
+      "fetched_at": "2026-10-05T23:05:31.867Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -67,7 +67,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.760Z",
+      "fetched_at": "2026-10-05T23:05:31.908Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -77,17 +77,17 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-02",
-      "fetched_at": "2026-10-02T21:13:46.795Z",
+      "fetched_at": "2026-10-05T23:05:31.948Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "FR0013416716": {
       "ticker": "GOLD.MI",
-      "close": 144.92999267578125,
+      "close": 145.6999969482422,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-09-30",
-      "fetched_at": "2026-10-02T21:13:46.826Z",
+      "session_date": "2026-10-02",
+      "fetched_at": "2026-10-05T23:05:31.999Z",
       "source": "yahoo_chart",
       "status": "ok"
     }
