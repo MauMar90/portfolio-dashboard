@@ -1712,6 +1712,10 @@ Object.assign(FINECO_MAP, customSecurities);
 
 let importedData = [];
 
+// Descrizioni dell'export movimenti Fineco gestite esplicitamente; le altre generano un avviso
+// nel riquadro "Qualità import" (la riga viene comunque trattata come compravendita).
+const DESCRIZIONI_RICONOSCIUTE = ['Compravendita titoli', 'Stacco Cedole', 'Sottoscrizione BTP Futura (collocamento)'];
+
 function parseDate(str) {
   if (!str) return null;
   const parts = str.split('/');
@@ -1836,6 +1840,11 @@ function handleFile(file) {
         const isBtp = !!(FINECO_MAP[isinKey] && FINECO_MAP[isinKey].isNominal);
         if (isBtp && segno === 'A' && (comm > 0 || price !== 100)) {
           importWarnings.push(`${isin}: acquisto BTP del ${dataRiga}${comm > 0 ? ' con commissione ' + fmtEur(comm) : ''}${price !== 100 ? ' a prezzo ' + price : ''} — convenzione non verificata: secondo la documentazione Fineco il controvalore d'acquisto include corso secco, rateo netto e commissione, mentre il costo fiscale include solo corso secco e commissione. Verificare PMC e plusvalenza con il dettaglio dell'eseguito.`);
+        }
+        // Descrizione non riconosciuta: la riga viene comunque trattata come compravendita (come
+        // prima), ma va segnalata — es. un premio fedeltà BTP non è un acquisto/vendita.
+        if (!DESCRIZIONI_RICONOSCIUTE.includes(desc)) {
+          importWarnings.push(`${isin}: riga del ${dataRiga} con descrizione "${desc}" non riconosciuta — trattata come ${segno === 'A' ? 'acquisto' : 'vendita'} (calcoli invariati). Verificare se è davvero una compravendita o un provento (es. premio fedeltà).`);
         }
         if (isinInfo && isinInfo.ac === 'Oro' && comm > 0) {
           importWarnings.push(`${isin}: ${segno === 'A' ? 'acquisto' : 'vendita'} ETC oro del ${dataRiga} con commissione ${fmtEur(comm)} — convenzione non verificata: per i redditi diversi Fineco deduce la commissione, la dashboard la tratta come per gli ETF (esclusa da PMC e plusvalenza).`);
