@@ -1731,6 +1731,15 @@ let importedData = [];
 // nel riquadro "Qualità import" (la riga viene comunque trattata come compravendita).
 const DESCRIZIONI_RICONOSCIUTE = ['Compravendita titoli', 'Stacco Cedole', 'Sottoscrizione BTP Futura (collocamento)'];
 
+// Data plausibile per una riga dell'export: valida e compresa tra il 1990 e l'anno prossimo.
+// Intercetta per esempio una data rimasta come numero seriale di Excel ("44313" → anno 44313).
+function dataPlausibile(d) {
+  return d instanceof Date && !isNaN(d) && d.getFullYear() >= 1990 && d.getFullYear() <= new Date().getFullYear() + 1;
+}
+function avvisoDataNonValida(isin, desc, testo) {
+  return `${isin}: data non valida "${testo}" (${desc}) — probabilmente un numero seriale di Excel o un formato diverso da gg/mm/aaaa. La riga è importata così com'è (calcoli invariati), ma data, ordine delle operazioni e XIRR non sono affidabili: correggere l'export.`;
+}
+
 function parseDate(str) {
   if (!str) return null;
   const parts = str.split('/');
@@ -1963,6 +1972,7 @@ function handleFile(file) {
         if (desc === 'Stacco Cedole') {
           const val = parseFloat(String(r[cCtv] || '0').replace(',','.')) || 0;
           const date = parseDate(String(r[cDate]));
+          if (!dataPlausibile(date)) importWarnings.push(avvisoDataNonValida(isin, desc, String(r[cDate])));
           if (!cedoleEventsThisFile[isin]) cedoleEventsThisFile[isin] = [];
           cedoleEventsThisFile[isin].push({ date, amount: Math.abs(val) });
           continue;
@@ -1975,6 +1985,7 @@ function handleFile(file) {
         const price = parseFloat(String(r[cPrezzo]).replace(',','.')) || 0;
         const comm  = parseFloat(String(r[cComm]).replace(',','.')) || 0;
         const date  = parseDate(String(r[cDate]));
+        if (!dataPlausibile(date)) importWarnings.push(avvisoDataNonValida(isin, desc, String(r[cDate])));
         const qtyExport = qty; // quantità come nel file (per il BTP: nominale), per il controllo Controvalore
 
         // BTP: Fineco esprime qty in valore nominale (1 quota = 1000 nominale)
