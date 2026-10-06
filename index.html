@@ -1013,9 +1013,9 @@ function render() {
         <td></td>
         <td class="m-ename" data-label="Titolo"><input class="edit-input" id="eN" value="${p.name}" style="width:100px"/></td>
         <td data-label="Classe"><select class="edit-select" id="eAC">${acSelectOptionsHtml(p.ac)}</select></td>
-        <td data-label="Quote"><input class="edit-input" id="eQty" type="number" step="any" value="${p.qty}"/></td>
+        <td data-label="Quote"><input class="edit-input" id="eQty" type="number" step="any" value="${p.qty}"${p.isin ? ' disabled' : ''}/></td>
         <td class="m-eprice" colspan="3" style="color:var(--text-dim); font-size:11px; font-family:'Inter',sans-serif;">
-          P.Carico: <input class="edit-input" id="ePrice" type="number" step="any" value="${p.price}" style="width:80px"/>
+          P.Carico: <input class="edit-input" id="ePrice" type="number" step="any" value="${p.price}" style="width:80px"${p.isin ? ' disabled' : ''}/>
           &nbsp; P.Mkt: <input class="edit-input" id="eMkt" type="number" step="any" value="${p.mkt}" style="width:105px"/>
         </td>
         <td></td>
@@ -1318,8 +1318,12 @@ function editRow(name) {
 function saveEdit(oldName) {
   const name  = document.getElementById('eN').value.trim();
   const ac    = document.getElementById('eAC').value;
-  const qty   = parseFloat(document.getElementById('eQty').value);
-  const price = parseFloat(document.getElementById('ePrice').value);
+  // Posizioni importate (con ISIN): quote e PMC vengono calcolati dall'import e non si
+  // modificano a mano (campi disabilitati e, per sicurezza, ignorati anche qui).
+  const current = positions.find(p => p.name === oldName);
+  const fromImport = !!(current && current.isin);
+  const qty   = fromImport ? current.qty   : parseFloat(document.getElementById('eQty').value);
+  const price = fromImport ? current.price : parseFloat(document.getElementById('ePrice').value);
   const mkt   = parseFloat(document.getElementById('eMkt').value);
   // mkt=0 è un valore VALIDO qui: rappresenta una posizione importata per cui il
   // prezzo di mercato non è ancora stato inserito (Fineco non lo esporta). Blocca
