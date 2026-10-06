@@ -477,6 +477,8 @@
   .import-result td:nth-child(2) { text-align: left; }
   .import-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
   .import-note { font-size: 11px; color: var(--text-dim); flex: 1; }
+  .backup-nota { font-size: 12px; line-height: 1.5; color: var(--text-dim); margin-top: 10px; }
+  .backup-azioni { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 
   /* ── Mobile (≤480px): solo leggibilità/usabilità, desktop invariato ── */
   .m-only { display: none; } /* celle di dettaglio mostrate solo su mobile (es. Quote) */
@@ -487,7 +489,7 @@
     /* header su due righe: logo + titolo, poi data e stato prezzi */
     header { flex-wrap: wrap; gap: 4px 12px; margin-bottom: 18px; }
     header > div:last-child { flex-basis: 100%; align-items: flex-start !important; }
-    #ts, #priceStatus { font-size: 12px !important; }
+    #ts, #priceStatus, #backupStatus { font-size: 12px !important; }
 
     /* KPI: Valore e Capitale Investito a tutta larghezza, poi P/L % Lordo + XIRR,
        P/L Non Realizzato + P/L Totale, e P/L Realizzato (testo lungo) a tutta larghezza.
@@ -621,10 +623,12 @@
   <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
     <div class="logo" id="ts" style="font-size:10px; color:var(--text-dim)"></div>
     <div class="logo" id="priceStatus" style="font-size:10px; color:var(--text-dim); cursor:default;"></div>
+    <div class="logo" id="backupStatus" style="font-size:10px; color:var(--text-dim);"></div>
   </div>
 </header>
 
 <div id="priceStaleWarn" style="display:none; font-size:12px; color:var(--gold); background:rgba(201,168,76,.08); border:1px solid var(--gold-dim); border-radius:8px; padding:8px 12px; margin-bottom:14px;"></div>
+<div id="backupWarn" style="display:none; font-size:12px; color:var(--gold); background:rgba(201,168,76,.08); border:1px solid var(--gold-dim); border-radius:8px; padding:8px 12px; margin-bottom:14px;"></div>
 
 <!-- KPI -->
 <div class="kpi-row" id="kpiRow">
@@ -831,6 +835,19 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Backup dati -->
+<div class="card" id="backupCard">
+  <div class="card-title">Backup dati</div>
+  <p class="backup-nota">Il backup contiene lo storico importato e i dati inseriti a mano (prezzi, nomi, operazioni manuali, target). Il file contiene dati personali: conservalo in un luogo sicuro.</p>
+  <div class="backup-azioni">
+    <button class="btn" onclick="esportaBackup()">⬇ Esporta backup</button>
+    <button class="btn-cancel" onclick="document.getElementById('backupFile').click()">⬆ Ripristina da backup</button>
+    <input type="file" id="backupFile" accept=".json,application/json" style="display:none" onchange="ripristinaBackupDaFile(this.files[0]); this.value='';"/>
+  </div>
+  <div id="backupEsito" class="backup-nota" style="display:none"></div>
+  <div id="persistStato" class="backup-nota"></div>
 </div>
 
 <!-- Modal: nuovo ETF sconosciuto -->
@@ -1717,12 +1734,15 @@ let customSecurities = JSON.parse(localStorage.getItem('pfCustomSecurities') || 
 // con soli {ticker, ac, name}, perdendo gli attributi strutturali (isNominal del BTP, sellOf
 // della sua linea di vendita). Questi attributi non sono personalizzabili: vengono sempre
 // ripresi dalla voce predefinita; nome, ticker e asset class personalizzati restano.
-Object.keys(customSecurities).forEach(isin => {
-  const base = FINECO_MAP[isin];
-  if (!base) return;
-  if (base.isNominal) customSecurities[isin].isNominal = base.isNominal;
-  if (base.sellOf)    customSecurities[isin].sellOf    = base.sellOf;
-});
+const FINECO_MAP_PREDEFINITA = JSON.parse(JSON.stringify(FINECO_MAP)); // voci predefinite, prima delle personalizzazioni
+function riparaAttributiTitolo(isin, voce) {
+  const base = FINECO_MAP_PREDEFINITA[isin];
+  if (!base) return voce;
+  if (base.isNominal) voce.isNominal = base.isNominal;
+  if (base.sellOf)    voce.sellOf    = base.sellOf;
+  return voce;
+}
+Object.keys(customSecurities).forEach(isin => riparaAttributiTitolo(isin, customSecurities[isin]));
 Object.assign(FINECO_MAP, customSecurities);
 
 let importedData = [];
@@ -1730,6 +1750,38 @@ let importedData = [];
 // Descrizioni dell'export movimenti Fineco gestite esplicitamente; le altre generano un avviso
 // nel riquadro "Qualità import" (la riga viene comunque trattata come compravendita).
 const DESCRIZIONI_RICONOSCIUTE = ['Compravendita titoli', 'Stacco Cedole', 'Sottoscrizione BTP Futura (collocamento)'];
+
+// Riconciliazione per conteggio di firma tra storico (pfImportedOps) e nuove righe: usata
+// dall'import e dal ripristino backup. Vedi il commento in handleFile per il perché del conteggio.
+const opSig = (isin, op) => [isin, op.date.toISOString(), op.segno, op.qty, op.price, op.comm].join('|');
+const cedolaSig = (isin, c) => [isin, c.date.toISOString(), c.amount].join('|');
+
+function countBySig(arr, sigFn) {
+  const m = new Map();
+  arr.forEach(x => { const k = sigFn(x); m.set(k, (m.get(k) || 0) + 1); });
+  return m;
+}
+
+// avvisi: array in cui segnalare righe identiche nello stesso file (null = nessun avviso)
+function reconcileByCount(existingArr, newArr, sigFn, isin, label, avvisi = importWarnings) {
+  const existingCounts = countBySig(existingArr, sigFn);
+  const grouped = new Map(); // firma -> [oggetti], nell'ordine di apparizione nel file
+  newArr.forEach(x => {
+    const k = sigFn(x);
+    if (!grouped.has(k)) grouped.set(k, []);
+    grouped.get(k).push(x);
+  });
+  const added = [];
+  grouped.forEach((items, sig) => {
+    if (items.length > 1 && avvisi) {
+      avvisi.push(`${label} ${isin}: ${items.length} righe con parametri identici nello stesso file in data ${items[0].date.toLocaleDateString('it-IT')} — mantenute come operazioni distinte.`);
+    }
+    const already = existingCounts.get(sig) || 0;
+    const toAdd = Math.max(0, items.length - already);
+    for (let i = 0; i < toAdd; i++) added.push(items[i]);
+  });
+  return added;
+}
 
 // Data plausibile per una riga dell'export: valida e compresa tra il 1990 e l'anno prossimo.
 // Intercetta per esempio una data rimasta come numero seriale di Excel ("44313" → anno 44313).
@@ -2041,35 +2093,7 @@ function handleFile(file) {
       // - stesso file reimportato: conteggio invariato → zero aggiunte
       // - due operazioni realmente identiche nello stesso file: conteggio 2 vs storico 0 → entrambe aggiunte
       // - copertura crescente tra due file: si aggiunge solo la differenza in eccesso
-      const opSig = (isin, op) => [isin, op.date.toISOString(), op.segno, op.qty, op.price, op.comm].join('|');
-      const cedolaSig = (isin, c) => [isin, c.date.toISOString(), c.amount].join('|');
-
-      function countBySig(arr, sigFn) {
-        const m = new Map();
-        arr.forEach(x => { const k = sigFn(x); m.set(k, (m.get(k) || 0) + 1); });
-        return m;
-      }
-
-      function reconcileByCount(existingArr, newArr, sigFn, isin, label) {
-        const existingCounts = countBySig(existingArr, sigFn);
-        const grouped = new Map(); // firma -> [oggetti], nell'ordine di apparizione nel file
-        newArr.forEach(x => {
-          const k = sigFn(x);
-          if (!grouped.has(k)) grouped.set(k, []);
-          grouped.get(k).push(x);
-        });
-        const added = [];
-        grouped.forEach((items, sig) => {
-          if (items.length > 1) {
-            importWarnings.push(`${label} ${isin}: ${items.length} righe con parametri identici nello stesso file in data ${items[0].date.toLocaleDateString('it-IT')} — mantenute come operazioni distinte.`);
-          }
-          const already = existingCounts.get(sig) || 0;
-          const toAdd = Math.max(0, items.length - already);
-          for (let i = 0; i < toAdd; i++) added.push(items[i]);
-        });
-        return added;
-      }
-
+      // (opSig, cedolaSig, reconcileByCount: definite a livello globale, usate anche dal ripristino backup)
       const newOpsThisImportByIsin = {};
       Object.keys(byIsin).forEach(isin => {
         if (!importedOpsStore[isin]) importedOpsStore[isin] = { ops: [], cedole: [] };
@@ -2209,6 +2233,172 @@ function ricostruisciDaStorico() {
   }
 }
 
+// ── Backup dei dati ───────────────────────────────────────────────────────────
+// Il backup contiene lo storico importato (pfImportedOps) e i dati inseriti a mano, che lo
+// storico da solo non permette di ricostruire: prezzi di mercato (es. BTP), nomi/asset class
+// personalizzati, operazioni e posizioni manuali, target, seed BTP. Il ripristino UNISCE il
+// backup ai dati presenti con la stessa deduplica dell'import (nessun duplicato anche
+// ripristinando più volte); a parità di dato, quello già presente nel browser ha la precedenza.
+const BACKUP_FORMATO = 'portfolio-dashboard-backup', BACKUP_VERSIONE = 1, BACKUP_GIORNI_AVVISO = 30;
+
+function esportaBackup() {
+  let seed = null;
+  try { seed = JSON.parse(localStorage.getItem('pfBtpFuturaSeedOp') || 'null'); } catch (e) { seed = null; }
+  const ora = new Date();
+  const backup = {
+    formato: BACKUP_FORMATO, versione: BACKUP_VERSIONE, creato: ora.toISOString(),
+    dati: {
+      pfImportedOps:      importedOpsStore,
+      pfCustomSecurities: customSecurities,
+      pfOperations:       operations.filter(o => !o.fromImport),
+      pfTargets:          targets,
+      pfBtpFuturaSeedOp:  seed,
+      posizioniImportate: positions.filter(p => p.isin).map(p => ({ isin: p.isin, mkt: p.mkt })),
+      posizioniManuali:   positions.filter(p => !p.isin),
+    },
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+  const g = n => String(n).padStart(2, '0');
+  const a = document.createElement('a');
+  a.href = url;
+  // estensione .backup.json: esclusa dal .gitignore del repository pubblico
+  a.download = `portfolio-backup-${ora.getFullYear()}-${g(ora.getMonth() + 1)}-${g(ora.getDate())}.backup.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try { localStorage.setItem('pfLastBackup', ora.toISOString()); } catch (e) {}
+  aggiornaStatoBackup();
+}
+
+// Ripristino: validazione completa prima di toccare qualsiasi dato (tutto o niente).
+function ripristinaBackup(backup) {
+  const nonValido = m => { throw new Error('File di backup non valido: ' + m + '.'); };
+  if (!backup || backup.formato !== BACKUP_FORMATO) nonValido('formato non riconosciuto');
+  if (backup.versione !== BACKUP_VERSIONE) nonValido(`versione ${backup.versione} non supportata`);
+  const dati = backup.dati || {};
+  if (!dati.pfImportedOps || typeof dati.pfImportedOps !== 'object') nonValido('storico mancante');
+  const daData = (v, dove) => { const d = new Date(v); if (!dataPlausibile(d)) nonValido(`data non valida in ${dove}`); return d; };
+  const storicoBackup = {};
+  for (const [isin, voce] of Object.entries(dati.pfImportedOps)) {
+    storicoBackup[isin] = {
+      ops:    (voce.ops    || []).map((op, i) => ({ ...op, date: daData(op.date, `${isin}, operazione ${i + 1}`) })),
+      cedole: (voce.cedole || []).map((c, i)  => ({ ...c,  date: daData(c.date,  `${isin}, cedola ${i + 1}`) })),
+    };
+  }
+
+  // Unione su copie: lo stato attuale cambia solo alla fine
+  const storico = {};
+  for (const [isin, voce] of Object.entries(importedOpsStore)) storico[isin] = { ops: [...voce.ops], cedole: [...(voce.cedole || [])] };
+  const esito = { opsAggiunte: 0, cedoleAggiunte: 0, giaPresenti: 0, posizioniAggiunte: 0, manualiAggiunte: 0 };
+  for (const [isin, voce] of Object.entries(storicoBackup)) {
+    if (!storico[isin]) storico[isin] = { ops: [], cedole: [] };
+    const nuoveOps = reconcileByCount(storico[isin].ops,    voce.ops,    op => opSig(isin, op),    isin, 'Operazioni', null);
+    const nuoveCed = reconcileByCount(storico[isin].cedole, voce.cedole, c  => cedolaSig(isin, c), isin, 'Cedole',     null);
+    storico[isin].ops.push(...nuoveOps); storico[isin].cedole.push(...nuoveCed);
+    esito.opsAggiunte += nuoveOps.length; esito.cedoleAggiunte += nuoveCed.length;
+    esito.giaPresenti += (voce.ops.length - nuoveOps.length) + (voce.cedole.length - nuoveCed.length);
+  }
+  const custom = { ...customSecurities };
+  for (const [isin, voce] of Object.entries(dati.pfCustomSecurities || {})) {
+    if (!custom[isin]) custom[isin] = riparaAttributiTitolo(isin, { ...voce });
+  }
+  const firmaManuale = o => [o.ticker, o.tipo, o.data, o.qty, o.price, o.comm || 0].join('|');
+  const manualiNuove = reconcileByCount(operations.filter(o => !o.fromImport),
+    (dati.pfOperations || []).filter(o => !o.fromImport), firmaManuale, '', '', null);
+  esito.manualiAggiunte = manualiNuove.length;
+  const pos = positions.map(p => ({ ...p }));
+  for (const { isin, mkt } of (dati.posizioniImportate || [])) {
+    if (!storico[isin]) continue;
+    const esistente = pos.find(p => p.isin === isin);
+    if (esistente) { if (!(esistente.mkt > 0) && mkt > 0) esistente.mkt = mkt; continue; }
+    const info = custom[isin] || FINECO_MAP[isin];
+    // segnaposto: quote, PMC e il resto vengono ricalcolati subito dopo dallo storico
+    pos.push({ isin, name: info ? info.name : isin, ac: info ? info.ac : 'Azioni', qty: 0, price: 0, mkt: mkt || 0, closed: false });
+    esito.posizioniAggiunte++;
+  }
+  for (const m of (dati.posizioniManuali || [])) {
+    if (!m.isin && !pos.some(p => p.name === m.name)) { pos.push({ ...m }); esito.posizioniAggiunte++; }
+  }
+
+  // Applicazione
+  importedOpsStore = storico;
+  customSecurities = custom; Object.assign(FINECO_MAP, custom);
+  operations = [...operations, ...manualiNuove];
+  if (dati.pfTargets && !Object.values(targets || {}).some(v => Number(v) > 0)) targets = dati.pfTargets;
+  if (dati.pfBtpFuturaSeedOp && !localStorage.getItem('pfBtpFuturaSeedOp')) {
+    localStorage.setItem('pfBtpFuturaSeedOp', JSON.stringify(dati.pfBtpFuturaSeedOp));
+  }
+  positions = pos;
+  localStorage.setItem('pfImportedOps', JSON.stringify(importedOpsStore));
+  localStorage.setItem('pfCustomSecurities', JSON.stringify(customSecurities));
+  localStorage.setItem('pfTargets', JSON.stringify(targets));
+  ricostruisciDaStorico();
+  render();
+  aggiornaStatoBackup();
+  return esito;
+}
+
+function ripristinaBackupDaFile(file) {
+  if (!file) return Promise.resolve();
+  const box = document.getElementById('backupEsito');
+  return new Promise(resolve => {
+    const fine = (ok, testo) => { box.style.color = ok ? 'var(--green)' : 'var(--red)'; box.textContent = testo; box.style.display = 'block'; resolve(); };
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        let obj;
+        try { obj = JSON.parse(reader.result); } catch (e) { throw new Error('File di backup non valido: non è un file JSON.'); }
+        const r = ripristinaBackup(obj);
+        fine(true, `✓ Ripristino completato: ${r.opsAggiunte} operazioni e ${r.cedoleAggiunte} cedole aggiunte, ${r.giaPresenti} già presenti (non duplicate); ${r.posizioniAggiunte} posizioni e ${r.manualiAggiunte} operazioni manuali aggiunte.`);
+      } catch (e) {
+        fine(false, '✗ ' + e.message + ' Nessun dato è stato modificato.');
+      }
+    };
+    reader.onerror = () => fine(false, '✗ Impossibile leggere il file. Nessun dato è stato modificato.');
+    reader.readAsText(file);
+  });
+}
+
+// Data dell'ultimo backup sempre visibile (intestazione) + avviso oltre BACKUP_GIORNI_AVVISO giorni
+function aggiornaStatoBackup() {
+  const el = document.getElementById('backupStatus'), warn = document.getElementById('backupWarn');
+  if (!el || !warn) return;
+  const raw = localStorage.getItem('pfLastBackup');
+  const d = raw ? new Date(raw) : null;
+  const valida = !!d && !isNaN(d);
+  const giorni = valida ? Math.floor((Date.now() - d.getTime()) / 864e5) : null;
+  const ciSonoDati = Object.keys(importedOpsStore).length > 0 || positions.length > 0;
+  el.textContent = valida ? 'Ultimo backup ' + d.toLocaleDateString('it-IT') : 'Nessun backup';
+  let msg = '';
+  if (ciSonoDati && !valida) {
+    msg = '⚠️ Nessun backup dei dati: usa "Esporta backup" nella sezione Backup dati in fondo alla pagina.';
+  } else if (ciSonoDati && giorni > BACKUP_GIORNI_AVVISO) {
+    msg = `⚠️ Ultimo backup del ${d.toLocaleDateString('it-IT')}, più vecchio di ${BACKUP_GIORNI_AVVISO} giorni: esporta un nuovo backup (sezione Backup dati in fondo alla pagina).`;
+  }
+  el.style.color = msg ? 'var(--gold)' : 'var(--text-dim)';
+  warn.textContent = msg;
+  warn.style.display = msg ? 'block' : 'none';
+}
+
+// Richiesta al browser di non cancellare i dati per liberare spazio (può essere rifiutata)
+async function richiediArchiviazionePersistente() {
+  const el = document.getElementById('persistStato');
+  if (!el) return;
+  if (!(navigator.storage && navigator.storage.persisted)) {
+    el.textContent = 'Archiviazione persistente: non supportata da questo browser — esporta backup regolari.';
+    return;
+  }
+  try {
+    const ciSonoDati = Object.keys(importedOpsStore).length > 0 || positions.length > 0;
+    let ok = await navigator.storage.persisted();
+    if (!ok && ciSonoDati && navigator.storage.persist) ok = await navigator.storage.persist();
+    el.textContent = ok
+      ? '✓ Archiviazione persistente concessa: il browser non cancellerà questi dati per liberare spazio.'
+      : '⚠️ Archiviazione persistente non concessa dal browser: i dati possono essere cancellati se manca spazio (su iPhone aiuta aggiungere la dashboard alla schermata Home). Esporta backup regolari.';
+  } catch (e) {
+    el.textContent = 'Archiviazione persistente: stato non disponibile — esporta backup regolari.';
+  }
+}
+
 function applyImport() {
   if (!importedData.length) return;
   // keep existing mkt prices — matching per isin: name è solo l'etichetta visualizzata/
@@ -2255,6 +2445,8 @@ document.getElementById('ts').textContent = new Date().toLocaleDateString('it-IT
 
 ricostruisciDaStorico(); // posizioni importate ricalcolate dallo storico prima del primo render
 render();
+aggiornaStatoBackup();
+richiediArchiviazionePersistente();
 
 // ── Aggiornamento automatico prezzi (prices.json, generato da GitHub Action) ───
 // Principio non negoziabile: prices.json è una fonte ADDITIVA, mai sostitutiva di
