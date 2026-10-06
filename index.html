@@ -1925,6 +1925,10 @@ function handleFile(file) {
                      : headers.length - 1; // ultima colonna come fallback
       const cTitolo  = col('Titolo');
       const cCtv     = col('Controvalore');
+      const cDivisa  = col('Divisa');
+      // Tolleranza del controllo Controvalore ≈ quantità × Prezzo, per riga: il Prezzo export ha
+      // 5 decimali e il Controvalore è arrotondato al centesimo (scarto reale osservato ≤ 0,005 €).
+      const TOLLERANZA_CONTROVALORE = 0.01;
 
       // aggregate by ISIN (operazioni lette da QUESTO file)
       const byIsin = {};
@@ -1950,6 +1954,12 @@ function handleFile(file) {
         const desc = String(r[cDesc] || '').trim();
         if (!isin) continue;
 
+        // Divisa: la dashboard non converte i cambi (anche le cedole sono controllate)
+        const divisa = cDivisa >= 0 ? String(r[cDivisa] || '').trim().toUpperCase() : '';
+        if (divisa && divisa !== 'EUR') {
+          importWarnings.push(`${isin}: riga del ${String(r[cDate])} in divisa ${divisa} — la dashboard non converte i cambi, gli importi sono trattati come euro (calcoli invariati).`);
+        }
+
         if (desc === 'Stacco Cedole') {
           const val = parseFloat(String(r[cCtv] || '0').replace(',','.')) || 0;
           const date = parseDate(String(r[cDate]));
@@ -1965,6 +1975,7 @@ function handleFile(file) {
         const price = parseFloat(String(r[cPrezzo]).replace(',','.')) || 0;
         const comm  = parseFloat(String(r[cComm]).replace(',','.')) || 0;
         const date  = parseDate(String(r[cDate]));
+        const qtyExport = qty; // quantità come nel file (per il BTP: nominale), per il controllo Controvalore
 
         // BTP: Fineco esprime qty in valore nominale (1 quota = 1000 nominale)
         if (isinInfo && isinInfo.isNominal) qty = qty / 1000;
@@ -1980,6 +1991,23 @@ function handleFile(file) {
         // Avvisi su convenzioni non verificate (solo segnalazione, calcoli invariati)
         const dataRiga = date && !isNaN(date) ? date.toLocaleDateString('it-IT') : String(r[cDate]);
         const isBtp = !!(FINECO_MAP[isinKey] && FINECO_MAP[isinKey].isNominal);
+        // Commissione: cella non vuota ma non numerica (diventerebbe 0 in silenzio) o negativa
+        const commCella = r[cComm];
+        const commTesto = commCella === undefined || commCella === null ? '' : String(commCella).trim();
+        if (commTesto !== '' && typeof commCella !== 'number' && !/^-?\d+([.,]\d+)?$/.test(commTesto)) {
+          importWarnings.push(`${isin}: riga del ${dataRiga} con commissione "${commTesto}" non leggibile come numero — trattata come 0 (calcoli invariati). Verificare l'export.`);
+        } else if (comm < 0) {
+          importWarnings.push(`${isin}: riga del ${dataRiga} con commissione negativa (${fmtEur(comm)}) — segno inatteso: Fineco esporta commissioni positive e un valore negativo ribalterebbe PMC e plusvalenza (calcoli invariati). Verificare l'export.`);
+        }
+        // Controvalore ≈ quantità × Prezzo (BTP: nominale × Prezzo / 100): se no, formato export cambiato
+        const ctvTesto = r[cCtv] === undefined || r[cCtv] === null ? '' : String(r[cCtv]).trim();
+        if (cCtv >= 0 && ctvTesto !== '') {
+          const ctvNum = Math.abs(parseFloat(ctvTesto.replace(',', '.')));
+          const atteso = isBtp ? qtyExport * price / 100 : qtyExport * price;
+          if (!isFinite(ctvNum) || Math.abs(ctvNum - atteso) > TOLLERANZA_CONTROVALORE + 1e-9) {
+            importWarnings.push(`${isin}: riga del ${dataRiga} con Controvalore ${ctvTesto} diverso da ${isBtp ? 'nominale × Prezzo / 100' : 'quantità × Prezzo'} = ${fmt(atteso, 2)} (tolleranza ${fmt(TOLLERANZA_CONTROVALORE, 2)} €) — formato dell'export inatteso, verificare (calcoli invariati).`);
+          }
+        }
         if (isBtp && segno === 'A' && (comm > 0 || price !== 100)) {
           importWarnings.push(`${isin}: acquisto BTP del ${dataRiga}${comm > 0 ? ' con commissione ' + fmtEur(comm) : ''}${price !== 100 ? ' a prezzo ' + price : ''} — convenzione non verificata: secondo la documentazione Fineco il controvalore d'acquisto include corso secco, rateo netto e commissione, mentre il costo fiscale include solo corso secco e commissione. Verificare PMC e plusvalenza con il dettaglio dell'eseguito.`);
         }
