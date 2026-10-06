@@ -2127,6 +2127,49 @@ function renderImportTable() {
   document.getElementById('importResult').style.display = 'block';
 }
 
+// Voce di portafoglio a partire dal risultato di calcolaPosizione(): stessi campi per
+// "Applica al portafoglio" e per la ricostruzione all'apertura.
+function posizioneDaCalcolo(d, mkt) {
+  return {
+    isin: d.isin, ticker: d.ticker,
+    name: d.name, ac: d.ac, qty: d.qty, price: d.price, mkt,
+    commTot: d.commTot, firstDate: d.firstDate ? d.firstDate.toISOString() : null,
+    cedole: d.cedole,
+    realizedPLgross: d.realizedPLgross || 0,
+    realizedPLnet:   d.realizedPLnet   || 0,
+    cashFlows: d.cashFlows || [], isNominal: d.isNominal || false,
+    closed: d.closed || false,
+  };
+}
+
+// Ricostruzione all'apertura: le posizioni importate vengono ricalcolate dallo storico
+// pfImportedOps (sola lettura, mai scritto) con la stessa funzione dell'import e la stessa
+// unione di "Applica al portafoglio" (prezzo di mercato conservato per ISIN, operazioni
+// manuali riapplicate con la funzione esistente). Così una correzione di formula vale subito,
+// senza reimport. Si ricostruiscono solo le posizioni già presenti nel portafoglio (una
+// posizione rimossa non ricompare); quelle senza ISIN o senza storico restano com'erano.
+// Se qualcosa va storto restano le posizioni salvate.
+function ricostruisciDaStorico() {
+  try {
+    const conStorico = p => p.isin && importedOpsStore[p.isin] &&
+      ((importedOpsStore[p.isin].ops || []).length + (importedOpsStore[p.isin].cedole || []).length) > 0;
+    const daRicostruire = positions.filter(conStorico);
+    if (!daRicostruire.length) return;
+    const today = new Date();
+    let ricostruite = daRicostruire.map(p =>
+      posizioneDaCalcolo(calcolaPosizione(p.isin, importedOpsStore[p.isin], p.name, today), p.mkt));
+    ricostruite = applyManualOpsToImported(ricostruite);
+    const perIsin = new Map(ricostruite.map(r => [r.isin, r]));
+    const isinRicostruiti = new Set(daRicostruire.map(p => p.isin));
+    // stesso ordine di prima; una posizione chiusa da operazioni manuali viene tolta come in Applica
+    positions = positions
+      .filter(p => !isinRicostruiti.has(p.isin) || perIsin.has(p.isin))
+      .map(p => perIsin.get(p.isin) || p);
+  } catch (e) {
+    console.warn('Ricostruzione dallo storico non riuscita: restano le posizioni salvate.', e);
+  }
+}
+
 function applyImport() {
   if (!importedData.length) return;
   // keep existing mkt prices — matching per isin: name è solo l'etichetta visualizzata/
@@ -2135,16 +2178,7 @@ function applyImport() {
     const existing = positions.find(p => p.isin === d.isin);
     d.mkt = existing ? existing.mkt : 0;
   });
-  let imported = importedData.map(d => ({
-    isin: d.isin, ticker: d.ticker,
-    name: d.name, ac: d.ac, qty: d.qty, price: d.price, mkt: d.mkt,
-    commTot: d.commTot, firstDate: d.firstDate ? d.firstDate.toISOString() : null,
-    cedole: d.cedole,
-    realizedPLgross: d.realizedPLgross || 0,
-    realizedPLnet:   d.realizedPLnet   || 0,
-    cashFlows: d.cashFlows || [], isNominal: d.isNominal || false,
-    closed: d.closed || false,
-  }));
+  let imported = importedData.map(d => posizioneDaCalcolo(d, d.mkt));
 
   // applica operazioni manuali aggiunte dopo l'ultimo import
   imported = applyManualOpsToImported(imported);
@@ -2180,6 +2214,7 @@ function clearImport() {
 // ── timestamp ─────────────────────────────────────────────────────────────────
 document.getElementById('ts').textContent = new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
 
+ricostruisciDaStorico(); // posizioni importate ricalcolate dallo storico prima del primo render
 render();
 
 // ── Aggiornamento automatico prezzi (prices.json, generato da GitHub Action) ───
