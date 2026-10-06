@@ -1765,6 +1765,133 @@ function getBtpFuturaSeedOp() {
   }
 }
 
+// Calcolo di una posizione dal suo storico in pfImportedOps (operazioni + cedole): PMC, quote,
+// realizzato, cedole, flussi XIRR. Usata sia dall'import (handleFile) sia dalla ricostruzione
+// delle posizioni all'apertura: stesse identiche formule. Non modifica lo storico (lavora su una
+// copia ordinata delle operazioni). nomeFallback: nome da usare se il titolo non è in FINECO_MAP.
+function calcolaPosizione(isin, data, nomeFallback, today) {
+  const info = FINECO_MAP[isin];
+  const nome = info ? info.name : nomeFallback;
+
+  let qtyNet = 0, costTot = 0, commTot = 0;
+  let firstDate = null;
+  const isNominal = info ? (info.isNominal || false) : false;
+  const cedoleTotal = (data.cedole || []).reduce((s,c) => s + c.amount, 0);
+
+  // sort by date asc
+  // ordinamento: per data crescente; a parità di data, acquisti prima delle vendite
+  // (convenzione dichiarata — Fineco non esporta l'ora, quindi l'ordine reale tra operazioni
+  // dello stesso giorno non è ricostruibile; vedi warning generato più sopra per questo caso)
+  const ops = data.ops.map(op => ({ ...op })).sort((a,b) => a.date - b.date || (a.segno === b.segno ? 0 : (a.segno === 'A' ? -1 : 1)));
+
+  ops.forEach(op => {
+    if (op.segno === 'A') {
+      if (qtyNet <= 0.0001) firstDate = op.date; // riapertura posizione o primo acquisto
+      // Convenzione export Fineco (verificata su dati reali contro il "P.zo medio di carico"
+      // Fineco): negli acquisti il Prezzo esportato include già la commissione per quota
+      // (Prezzo = esecuzione + comm/qty), quindi il costo di esecuzione è qty*price - comm.
+      // BTP (isNominal): Prezzo export = Totale eseguito / nominale × 100 (verificato sulla
+      // vendita reale; per l'acquisto per simmetria, segnalato da un avviso se comm > 0 o
+      // prezzo ≠ 100): la commissione è già nel prezzo → nessun termine comm (niente ×10).
+      costTot += isNominal ? op.qty * op.price : op.qty * op.price - op.comm;
+      qtyNet  += op.qty;
+      commTot += op.comm;
+    } else if (op.segno === 'V') {
+      // Costo medio ponderato (metodo Fineco per ETF/OICR)
+      const avgCostPerUnit = qtyNet > 0 ? costTot / qtyNet : 0;
+      const costOfSold = op.qty * avgCostPerUnit;
+      costTot -= costOfSold;
+      qtyNet  -= op.qty;
+      commTot += op.comm;
+      // ETF: prezzo effettivo di vendita = prezzo export + commissione/quantità (verificato su dati reali Fineco).
+      // BTP (isNominal): prezzo in % → ×10; il Prezzo export è il Totale netto dell'eseguito
+      // (corso secco + rateo netto − commissione, verificato su eseguito Fineco): la commissione è
+      // già dedotta e non va riaggiunta. Scarto noto vs Fineco = rateo netto (assente dall'export).
+      const sellPrice   = isNominal ? op.price * 10 : op.price + (op.qty > 0 ? op.comm / op.qty : 0);
+      const proceeds    = op.qty * sellPrice;
+      // FIX (Bug A): costOfSold è ancora nella scala "grezza" (senza ×10) di costTot/avgCostPerUnit,
+      // mentre proceeds è già in euro reali (×10 applicato sopra per isNominal). Prima di confrontarli
+      // per il calcolo di plus/minusvalenza, costOfSold va portato nella STESSA scala economica di proceeds.
+      const costOfSoldEconomic = isNominal ? costOfSold * 10 : costOfSold;
+      const taxableGain = proceeds - costOfSoldEconomic;
+      const tax = taxableGain > 0 ? taxableGain * taxRate(info ? info.ticker : nome) : 0;
+      op.realizedPL      = proceeds - costOfSoldEconomic - tax;
+      op.realizedPLgross = proceeds - costOfSoldEconomic;
+      if (qtyNet <= 0.0001) firstDate = null; // posizione chiusa
+    }
+  });
+
+  // qtyNet <= 0.0001: posizione completamente chiusa. Non si scarta più il record:
+  // viene comunque costruito e inserito in importedData, marcato closed:true, con
+  // qty forzata a 0 esatto (mai il residuo numerico di qtyNet). Questo evita che il
+  // realizedPL/cashFlow di chiusura vada perso e permette al merge in applyImport()
+  // di sostituire correttamente una eventuale entry stantia in positions.
+  const closed = qtyNet <= 0.0001;
+
+  // avgPrice resta nella stessa scala "grezza" (% nominale) di costTot/costOfSold, usata
+  // coerentemente da tutto il resto del codice (render riga, totalCost, display "% nom.").
+  // Prima (FIX Bug A pre-esistente) veniva applicata qui una /10 pensata per compensare un
+  // prezzo pre-iniettato espresso in una scala diversa (x10) rispetto alla % nominale; una
+  // volta riportato quel prezzo alla scala corretta, la /10 è diventata essa stessa la causa
+  // del disallineamento di scala nel costo residuo — va quindi rimossa.
+  let avgPrice = qtyNet > 0 ? costTot / qtyNet : 0;
+
+  // cashflows in euro reali (già corretti perché qty*price è in euro)
+  const cashFlows = [
+    ...ops.map(op => {
+      const opPrice = isNominal ? op.price * 10 : op.price;
+      // Flusso reale = controvalore (qty × Prezzo export): la commissione è già incorporata
+      // nel Prezzo (acquisti: lordo comm; vendite: netto comm), non va applicata di nuovo.
+      // Vale anche per il BTP (Totale eseguito = nominale × Prezzo / 100).
+      return {
+        amount: op.segno === 'A' ? -(op.qty * opPrice) : (op.qty * opPrice),
+        date:   op.date.toISOString()
+      };
+    }),
+    // Una cedola = un flusso alla sua data reale di pagamento (importo netto, come incassato).
+    // Prima: un unico flusso col totale alla data di oggi, che sottostimava l'XIRR.
+    ...(data.cedole || []).map(c => ({ amount: c.amount, date: c.date.toISOString() })),
+  ];
+
+  const years = firstDate ? (today - firstDate) / (365.25 * 24 * 3600 * 1000) : 0;
+
+  const ticker = info ? info.ticker : nome;
+  // Le cedole nell'export Fineco sono nette (ritenuta già applicata alla fonte —
+  // verificato su dati reali BTP Futura: gli importi netti coincidono al centesimo
+  // con lo schema cedolare ufficiale MEF, applicando l'aliquota del titolo). Il
+  // campo "lordo" deve mostrare l'importo PRE-tassazione, quindi le cedole vanno
+  // riportate al lordo con la stessa aliquota già usata per le vendite dello
+  // stesso titolo — non un nuovo criterio fiscale, solo applicato coerentemente.
+  const cedoleTotalGross = cedoleTotal / (1 - taxRate(ticker));
+  const realizedPLgross = ops
+    .filter(op => op.segno === 'V')
+    .reduce((s, op) => s + (op.realizedPLgross || 0), 0)
+    + cedoleTotalGross;
+  const realizedPLnet = ops
+    .filter(op => op.segno === 'V')
+    .reduce((s, op) => s + (op.realizedPL || 0), 0)
+    + cedoleTotal; // cedole già nette
+
+  return {
+    isin,
+    name:           nome,
+    ticker,
+    ac:             info ? info.ac : 'Azioni',
+    qty:            closed ? 0 : Math.round(qtyNet * 10000) / 10000,
+    price:          Math.round(avgPrice * 10000) / 10000,
+    mkt:            0,
+    commTot:        Math.round(commTot * 100) / 100,
+    firstDate,
+    years,
+    cedole:         cedoleTotal,
+    realizedPLgross: Math.round(realizedPLgross * 100) / 100,
+    realizedPLnet:   Math.round(realizedPLnet   * 100) / 100,
+    isNominal,
+    cashFlows,
+    closed,
+  };
+}
+
 function handleFile(file) {
   if (!file) return;
   const myImportToken = ++importToken; // catturato subito, in modo sincrono
@@ -1951,129 +2078,9 @@ function handleFile(file) {
       importedData = [];
 
       Object.keys({ ...byIsin, ...cedoleEventsThisFile }).forEach(isin => {
-        const data = importedOpsStore[isin]; // storico COMPLETO accumulato (non solo questo file)
-        const info = FINECO_MAP[isin];
         // usa sempre il nome dalla mappa se disponibile, altrimenti colonna Titolo
         const nomeFile = String(rows.slice(hIdx+1).find(r => String(r[cIsin]).trim() === isin)?.[cTitolo] || isin);
-        const nome = info ? info.name : nomeFile;
-
-        let qtyNet = 0, costTot = 0, commTot = 0;
-        let firstDate = null;
-        const isNominal = info ? (info.isNominal || false) : false;
-        const cedoleTotal = (data.cedole || []).reduce((s,c) => s + c.amount, 0);
-
-        // sort by date asc
-        // ordinamento: per data crescente; a parità di data, acquisti prima delle vendite
-        // (convenzione dichiarata — Fineco non esporta l'ora, quindi l'ordine reale tra operazioni
-        // dello stesso giorno non è ricostruibile; vedi warning generato più sopra per questo caso)
-        data.ops.sort((a,b) => a.date - b.date || (a.segno === b.segno ? 0 : (a.segno === 'A' ? -1 : 1)));
-
-        data.ops.forEach(op => {
-          if (op.segno === 'A') {
-            if (qtyNet <= 0.0001) firstDate = op.date; // riapertura posizione o primo acquisto
-            // Convenzione export Fineco (verificata su dati reali contro il "P.zo medio di carico"
-            // Fineco): negli acquisti il Prezzo esportato include già la commissione per quota
-            // (Prezzo = esecuzione + comm/qty), quindi il costo di esecuzione è qty*price - comm.
-            // BTP (isNominal): Prezzo export = Totale eseguito / nominale × 100 (verificato sulla
-            // vendita reale; per l'acquisto per simmetria, segnalato da un avviso se comm > 0 o
-            // prezzo ≠ 100): la commissione è già nel prezzo → nessun termine comm (niente ×10).
-            costTot += isNominal ? op.qty * op.price : op.qty * op.price - op.comm;
-            qtyNet  += op.qty;
-            commTot += op.comm;
-          } else if (op.segno === 'V') {
-            // Costo medio ponderato (metodo Fineco per ETF/OICR)
-            const avgCostPerUnit = qtyNet > 0 ? costTot / qtyNet : 0;
-            const costOfSold = op.qty * avgCostPerUnit;
-            costTot -= costOfSold;
-            qtyNet  -= op.qty;
-            commTot += op.comm;
-            // ETF: prezzo effettivo di vendita = prezzo export + commissione/quantità (verificato su dati reali Fineco).
-            // BTP (isNominal): prezzo in % → ×10; il Prezzo export è il Totale netto dell'eseguito
-            // (corso secco + rateo netto − commissione, verificato su eseguito Fineco): la commissione è
-            // già dedotta e non va riaggiunta. Scarto noto vs Fineco = rateo netto (assente dall'export).
-            const sellPrice   = isNominal ? op.price * 10 : op.price + (op.qty > 0 ? op.comm / op.qty : 0);
-            const proceeds    = op.qty * sellPrice;
-            // FIX (Bug A): costOfSold è ancora nella scala "grezza" (senza ×10) di costTot/avgCostPerUnit,
-            // mentre proceeds è già in euro reali (×10 applicato sopra per isNominal). Prima di confrontarli
-            // per il calcolo di plus/minusvalenza, costOfSold va portato nella STESSA scala economica di proceeds.
-            const costOfSoldEconomic = isNominal ? costOfSold * 10 : costOfSold;
-            const taxableGain = proceeds - costOfSoldEconomic;
-            const tax = taxableGain > 0 ? taxableGain * taxRate(info ? info.ticker : nome) : 0;
-            op.realizedPL      = proceeds - costOfSoldEconomic - tax;
-            op.realizedPLgross = proceeds - costOfSoldEconomic;
-            if (qtyNet <= 0.0001) firstDate = null; // posizione chiusa
-          }
-        });
-
-        // qtyNet <= 0.0001: posizione completamente chiusa. Non si scarta più il record:
-        // viene comunque costruito e inserito in importedData, marcato closed:true, con
-        // qty forzata a 0 esatto (mai il residuo numerico di qtyNet). Questo evita che il
-        // realizedPL/cashFlow di chiusura vada perso e permette al merge in applyImport()
-        // di sostituire correttamente una eventuale entry stantia in positions.
-        const closed = qtyNet <= 0.0001;
-
-        // avgPrice resta nella stessa scala "grezza" (% nominale) di costTot/costOfSold, usata
-        // coerentemente da tutto il resto del codice (render riga, totalCost, display "% nom.").
-        // Prima (FIX Bug A pre-esistente) veniva applicata qui una /10 pensata per compensare un
-        // prezzo pre-iniettato espresso in una scala diversa (x10) rispetto alla % nominale; una
-        // volta riportato quel prezzo alla scala corretta, la /10 è diventata essa stessa la causa
-        // del disallineamento di scala nel costo residuo — va quindi rimossa.
-        let avgPrice = qtyNet > 0 ? costTot / qtyNet : 0;
-
-        // cashflows in euro reali (già corretti perché qty*price è in euro)
-        const cashFlows = [
-          ...data.ops.map(op => {
-            const opPrice = isNominal ? op.price * 10 : op.price;
-            // Flusso reale = controvalore (qty × Prezzo export): la commissione è già incorporata
-            // nel Prezzo (acquisti: lordo comm; vendite: netto comm), non va applicata di nuovo.
-            // Vale anche per il BTP (Totale eseguito = nominale × Prezzo / 100).
-            return {
-              amount: op.segno === 'A' ? -(op.qty * opPrice) : (op.qty * opPrice),
-              date:   op.date.toISOString()
-            };
-          }),
-          // Una cedola = un flusso alla sua data reale di pagamento (importo netto, come incassato).
-          // Prima: un unico flusso col totale alla data di oggi, che sottostimava l'XIRR.
-          ...(data.cedole || []).map(c => ({ amount: c.amount, date: c.date.toISOString() })),
-        ];
-
-        const years = firstDate ? (today - firstDate) / (365.25 * 24 * 3600 * 1000) : 0;
-
-        const ticker = info ? info.ticker : nome;
-        // Le cedole nell'export Fineco sono nette (ritenuta già applicata alla fonte —
-        // verificato su dati reali BTP Futura: gli importi netti coincidono al centesimo
-        // con lo schema cedolare ufficiale MEF, applicando l'aliquota del titolo). Il
-        // campo "lordo" deve mostrare l'importo PRE-tassazione, quindi le cedole vanno
-        // riportate al lordo con la stessa aliquota già usata per le vendite dello
-        // stesso titolo — non un nuovo criterio fiscale, solo applicato coerentemente.
-        const cedoleTotalGross = cedoleTotal / (1 - taxRate(ticker));
-        const realizedPLgross = data.ops
-          .filter(op => op.segno === 'V')
-          .reduce((s, op) => s + (op.realizedPLgross || 0), 0)
-          + cedoleTotalGross;
-        const realizedPLnet = data.ops
-          .filter(op => op.segno === 'V')
-          .reduce((s, op) => s + (op.realizedPL || 0), 0)
-          + cedoleTotal; // cedole già nette
-
-        importedData.push({
-          isin,
-          name:           nome,
-          ticker,
-          ac:             info ? info.ac : 'Azioni',
-          qty:            closed ? 0 : Math.round(qtyNet * 10000) / 10000,
-          price:          Math.round(avgPrice * 10000) / 10000,
-          mkt:            0,
-          commTot:        Math.round(commTot * 100) / 100,
-          firstDate,
-          years,
-          cedole:         cedoleTotal,
-          realizedPLgross: Math.round(realizedPLgross * 100) / 100,
-          realizedPLnet:   Math.round(realizedPLnet   * 100) / 100,
-          isNominal,
-          cashFlows,
-          closed,
-        });
+        importedData.push(calcolaPosizione(isin, importedOpsStore[isin], nomeFile, today)); // storico COMPLETO accumulato
       });
 
       renderImportTable();
