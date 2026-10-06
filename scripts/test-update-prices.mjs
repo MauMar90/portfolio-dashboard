@@ -7,14 +7,46 @@
 // price-utils.mjs, importabile liberamente senza innescare fetch reali.
 
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import { toMilanSessionDate, daysBetween, deriveStaleStatus, STALE_DAYS } from './price-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PRICES_PATH = path.join(__dirname, '..', 'prices.json');
-const GITHUB_OUTPUT_PATH = path.join(__dirname, '.test-github-output');
+
+// ── Isolamento: il test NON deve mai scrivere il prices.json del repository ──
+// update-prices.js calcola il percorso di prices.json dalla posizione del proprio file
+// (__dirname/../prices.json) e non è modificabile (pipeline congelata). Il test ne esegue
+// quindi una COPIA identica in una cartella temporanea (tmp/scripts/), insieme alle sue
+// dipendenze locali: la copia scrive tmp/prices.json. GITHUB_OUTPUT punta anch'esso a tmp.
+const REPO_PRICES_PATH = path.join(__dirname, '..', 'prices.json');
+const sha256 = p => crypto.createHash('sha256').update(fsSync.existsSync(p) ? fsSync.readFileSync(p) : '').digest('hex');
+const repoPricesHashBefore = sha256(REPO_PRICES_PATH);
+
+const TMP_ROOT = await fs.mkdtemp(path.join(os.tmpdir(), 'test-update-prices-'));
+process.on('exit', () => { try { fsSync.rmSync(TMP_ROOT, { recursive: true, force: true }); } catch {} });
+const TMP_SCRIPTS = path.join(TMP_ROOT, 'scripts');
+await fs.mkdir(TMP_SCRIPTS);
+// Copia di update-prices.js e di tutte le sue dipendenze locali (import relativi, ricorsivi):
+// se la pipeline ne aggiungesse una nuova, viene copiata automaticamente.
+const daCopiare = ['update-prices.js'];
+for (let i = 0; i < daCopiare.length; i++) {
+  const src = path.join(__dirname, daCopiare[i]);
+  assert.ok(fsSync.existsSync(src), `dipendenza della pipeline non trovata: ${daCopiare[i]}`);
+  await fs.copyFile(src, path.join(TMP_SCRIPTS, daCopiare[i]));
+  const codice = fsSync.readFileSync(src, 'utf8');
+  for (const m of codice.matchAll(/from\s+['"]\.\/([^'"]+)['"]|import\(\s*['"]\.\/([^'"?]+)/g)) {
+    const dep = m[1] || m[2];
+    if (!daCopiare.includes(dep)) daCopiare.push(dep);
+  }
+}
+const PIPELINE_URL = pathToFileURL(path.join(TMP_SCRIPTS, 'update-prices.js')).href;
+const PRICES_PATH = path.join(TMP_ROOT, 'prices.json');
+const GITHUB_OUTPUT_PATH = path.join(TMP_ROOT, '.test-github-output');
+console.log(`Pipeline copiata in cartella temporanea con le sue dipendenze: ${daCopiare.join(', ')}`);
 
 const nowSec = Math.floor(Date.now() / 1000);
 const daysAgoSec = (n) => nowSec - n * 86400;
@@ -134,7 +166,7 @@ async function readSubstantiveChangeFlag() {
 
 async function runUpdatePrices() {
   await resetGithubOutput();
-  await import('./update-prices.js?t=' + Date.now() + Math.random());
+  await import(PIPELINE_URL + '?t=' + Date.now() + Math.random());
   await new Promise(r => setTimeout(r, 200));
   const result = JSON.parse(await fs.readFile(PRICES_PATH, 'utf8'));
   const substantiveChange = await readSubstantiveChangeFlag();
@@ -219,7 +251,7 @@ await fs.rm(GITHUB_OUTPUT_PATH).catch(() => {});
 // dedicato per ciascuno scenario.
 // ══════════════════════════════════════════════════════════════════════════
 
-const { fetchOne } = await import('./update-prices.js?t=' + Date.now() + Math.random());
+const { fetchOne } = await import(PIPELINE_URL + '?t=' + Date.now() + Math.random());
 // L'import innesca comunque, come sempre, l'esecuzione automatica di main() in
 // background (nessun guard, per progettazione invariata). Aspettiamo che le sue
 // 7 chiamate asincrone si esauriscano prima di riassegnare global.fetch qui
@@ -359,6 +391,13 @@ console.log('✓ Test 3.5 (regular.end/regularMarketTime mancanti o non validi -
   assert.equal(entry.status, expectedStatus, 'status coerente con la reale età di quel close (2 giorni fa)');
 }
 console.log('✓ Test 3.6 (ultima barra non appartiene alla sessione corrente -> close storico NON scartato) OK');
+
+// Le esecuzioni di main() lanciate in background dagli import vanno lasciate concludere
+// prima di verificare che il prices.json del repository sia rimasto intatto.
+await new Promise(r => setTimeout(r, 500));
+assert.equal(sha256(REPO_PRICES_PATH), repoPricesHashBefore, 'il prices.json del repository NON deve essere modificato dal test');
+assert.ok(!fsSync.existsSync(path.join(__dirname, '.test-github-output')), 'nessun file .test-github-output nel repository');
+console.log('✓ prices.json del repository intatto (hash invariato), nessun file di output nel repository');
 
 console.log('\n✓ Tutti i test passati.');
 
