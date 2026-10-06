@@ -1343,7 +1343,8 @@ function saveEdit(oldName) {
   }
   positions[idx] = { ...positions[idx], name, ac, qty, price, mkt };
   if (positions[idx].isin) {
-    FINECO_MAP[positions[idx].isin] = { ticker: positions[idx].ticker || name, ac, name };
+    // Unione, non sostituzione: conserva gli attributi del titolo (isNominal, sellOf…)
+    FINECO_MAP[positions[idx].isin] = { ...FINECO_MAP[positions[idx].isin], ticker: positions[idx].ticker || name, ac, name };
     customSecurities[positions[idx].isin] = FINECO_MAP[positions[idx].isin];
     try { localStorage.setItem('pfCustomSecurities', JSON.stringify(customSecurities)); } catch(e) {}
   }
@@ -1708,6 +1709,16 @@ const FINECO_MAP = {
 // titoli sconosciuti classificati manualmente in passato (persistiti, così non vengono richiesti di nuovo
 // e non generano posizioni duplicate con un nome diverso ad ogni sessione)
 let customSecurities = JSON.parse(localStorage.getItem('pfCustomSecurities') || '{}');
+// Riparazione all'apertura: versioni precedenti di saveEdit sostituivano la voce del titolo
+// con soli {ticker, ac, name}, perdendo gli attributi strutturali (isNominal del BTP, sellOf
+// della sua linea di vendita). Questi attributi non sono personalizzabili: vengono sempre
+// ripresi dalla voce predefinita; nome, ticker e asset class personalizzati restano.
+Object.keys(customSecurities).forEach(isin => {
+  const base = FINECO_MAP[isin];
+  if (!base) return;
+  if (base.isNominal) customSecurities[isin].isNominal = base.isNominal;
+  if (base.sellOf)    customSecurities[isin].sellOf    = base.sellOf;
+});
 Object.assign(FINECO_MAP, customSecurities);
 
 let importedData = [];
