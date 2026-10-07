@@ -477,6 +477,8 @@
   .import-result td:nth-child(2) { text-align: left; }
   .import-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
   .import-note { font-size: 11px; color: var(--text-dim); flex: 1; }
+  .nota-valori { margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+  .nota-valori strong { color: var(--text); font-weight: 500; }
   .backup-nota { font-size: 12px; line-height: 1.5; color: var(--text-dim); margin-top: 10px; }
   .backup-azioni { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 
@@ -507,6 +509,7 @@
     .kpi[data-kpi="plreal"]   { grid-column: 1 / -1; order: 6; }
     #kTotal { font-size: 30px; }
     #kCost  { font-size: 20px; }
+    .nota-valori { font-size: 13px; }
     #kPLpct, #kCAGR { font-size: 24px; }
     #kPLreal { font-size: 13px !important; } /* render() lo porta a 11px inline col dettaglio lordo/imposta */
 
@@ -732,6 +735,7 @@
       </tfoot>
     </table>
   </div>
+  <p class="nota-valori" id="notaValori"><strong>Come leggere i valori.</strong> <strong>ETF ed ETC:</strong> PMC e P/L escludono le commissioni, come il prezzo medio di carico Fineco. <strong>BTP Futura:</strong> il costo d'acquisto include la commissione e il ricavo di vendita è al netto della commissione, come il costo fiscale Fineco per i titoli di Stato; il valore di mercato usa il corso secco, il rateo entra con le cedole o con la vendita. <strong>XIRR:</strong> rendimento annuo prima delle imposte, calcolato sui controvalori di acquisti e vendite (commissioni comprese), sulle cedole al lordo della ritenuta e sul valore attuale delle posizioni. Non è confrontabile con il P/L %.</p>
 </div>
 
 <!-- Aggiungi operazione manuale -->
@@ -1697,6 +1701,7 @@ function applyManualOpsToImported(imported) {
   return imported;
 }
 
+const ALIQUOTA_TITOLI_STATO = 0.125; // ritenuta su cedole e plusvalenze dei titoli di Stato (BTP)
 const TAX_RATES = {
   'BTP Futura': 0.125,
   'XEON':       0.1419,
@@ -1909,9 +1914,12 @@ function calcolaPosizione(isin, data, nomeFallback, today) {
         date:   op.date.toISOString()
       };
     }),
-    // Una cedola = un flusso alla sua data reale di pagamento (importo netto, come incassato).
-    // Prima: un unico flusso col totale alla data di oggi, che sottostimava l'XIRR.
-    ...(data.cedole || []).map(c => ({ amount: c.amount, date: c.date.toISOString() })),
+    // Una cedola = un flusso alla sua data reale di pagamento, AL LORDO della ritenuta
+    // (netto / (1 − aliquota del titolo)): stessa base "prima delle imposte" di controvalori e
+    // valore finale. È la ritenuta già applicata da Fineco alla cedola (verificato sui dati BTP:
+    // il lordo è una percentuale tonda del nominale), non un'imposta stimata dalla dashboard.
+    // Realizzato e "Cedole incassate" usano i loro valori, invariati.
+    ...(data.cedole || []).map(c => ({ amount: c.amount / (1 - taxRate(info ? info.ticker : nome)), date: c.date.toISOString() })),
   ];
 
   const years = firstDate ? (today - firstDate) / (365.25 * 24 * 3600 * 1000) : 0;
@@ -2025,6 +2033,12 @@ function handleFile(file) {
           const val = parseFloat(String(r[cCtv] || '0').replace(',','.')) || 0;
           const date = parseDate(String(r[cDate]));
           if (!dataPlausibile(date)) importWarnings.push(avvisoDataNonValida(isin, desc, String(r[cDate])));
+          // Nei flussi XIRR la cedola è riportata al lordo con l'aliquota di tabella del titolo:
+          // verificata solo per i titoli di Stato (12,5%); per gli altri va controllata.
+          const tickerCedola = FINECO_MAP[isin] ? FINECO_MAP[isin].ticker : isin;
+          if (taxRate(tickerCedola) !== ALIQUOTA_TITOLI_STATO) {
+            importWarnings.push(`${isin}: cedola del ${String(r[cDate])} su un titolo che non risulta di Stato (aliquota di tabella ${fmt(taxRate(tickerCedola) * 100, 2)}%): cedola riportata al lordo con l'aliquota di tabella, verificare la ritenuta effettiva.`);
+          }
           if (!cedoleEventsThisFile[isin]) cedoleEventsThisFile[isin] = [];
           cedoleEventsThisFile[isin].push({ date, amount: Math.abs(val) });
           continue;
