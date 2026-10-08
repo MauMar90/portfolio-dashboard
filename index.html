@@ -2448,12 +2448,13 @@ function leggiExportPortafoglio(rows) {
     .map(r => ({ isin: String(r[cIsin]).trim(), titolo: String(r[cTit] || ''), q: num(r[cQta]), pmc: num(r[cPmc]), strumento: String(r[cStr] || '') }));
 }
 
-// Posizioni aperte della dashboard al giorno indicato (AAAA-MM-GG, Europe/Rome), dallo storico
-function posizioniAlGiorno(giorno) {
+// Posizioni aperte della dashboard al giorno indicato (AAAA-MM-GG, Europe/Rome), dallo storico.
+// mappaOp (facoltativa) trasforma una COPIA di ogni operazione prima del calcolo.
+function posizioniAlGiorno(giorno, mappaOp = o => o) {
   const out = {};
   for (const [isin, voce] of Object.entries(importedOpsStore)) {
     const filtrata = {
-      ops:    (voce.ops    || []).filter(o => giornoRoma(o.date) <= giorno),
+      ops:    (voce.ops    || []).filter(o => giornoRoma(o.date) <= giorno).map(o => mappaOp({ ...o }, isin)),
       cedole: (voce.cedole || []).filter(c => giornoRoma(c.date) <= giorno),
     };
     if (!filtrata.ops.length) continue;
@@ -2461,6 +2462,17 @@ function posizioniAlGiorno(giorno) {
     if (!d.closed) out[isin] = d;
   }
   return out;
+}
+
+// BTP: PMC della dashboard tolte le commissioni d'acquisto (Prezzo export al netto di comm/quota,
+// in % del nominale: comm € / quote / 10). Serve solo a spiegare una differenza con il carico
+// secco di Fineco; calcolaPosizione non cambia.
+function pmcBtpSenzaCommissioni(giorno, isin) {
+  const d = posizioniAlGiorno(giorno, (o, i) => {
+    if (i === isin && o.segno === 'A' && o.qty > 0) o.price -= (o.comm || 0) / o.qty / 10;
+    return o;
+  })[isin];
+  return d ? d.price : null;
 }
 
 function confrontaConFineco(righe, giorno) {
@@ -2477,8 +2489,14 @@ function confrontaConFineco(righe, giorno) {
     if (Math.abs(a.qty - qFin) > TOLL_QTA_RIC) {
       differenze.push({ isin, nome, tipo: 'quantita', qDash: a.qty, qFin });
     } else if (Math.abs(a.price - b.pmc) > TOLL_PMC_RIC + 1e-12) {
-      differenze.push({ isin, nome, tipo: 'pmc', pmcDash: a.price, pmcFin: b.pmc,
-        nota: a.isNominal ? "il costo BTP della dashboard include l'eventuale commissione d'acquisto, Fineco espone il carico secco" : '' });
+      const diff = { isin, nome, tipo: 'pmc', pmcDash: a.price, pmcFin: b.pmc };
+      // BTP: spiegazione esplicita SOLO se togliendo le commissioni d'acquisto il PMC coincide
+      const secco = a.isNominal ? pmcBtpSenzaCommissioni(giorno, isin) : null;
+      if (secco !== null && Math.abs(secco - b.pmc) <= TOLL_PMC_RIC + 1e-12) {
+        diff.soloCommissione = true;
+        diff.commissione = (a.price - secco) * a.qty * 10;   // € sulle quote ancora in portafoglio
+      }
+      differenze.push(diff);
     } else coincidenti++;
   }
   return { giorno, totale: isins.length, coincidenti, differenze };
@@ -2535,7 +2553,7 @@ function renderRiconciliazione() {
   const riga = d => {
     const t = `<strong>${escHtml(d.nome)}</strong> (${d.isin})`;
     if (d.tipo === 'quantita')       return `${t}: quantità dashboard ${f(d.qDash, 4)}, Fineco ${f(d.qFin, 4)}`;
-    if (d.tipo === 'pmc')            return `${t}: PMC dashboard ${f(d.pmcDash, 5)}, Fineco ${f(d.pmcFin, 5)} (tolleranza ${fmt(TOLL_PMC_RIC, 4)})${d.nota ? ' — ' + escHtml(d.nota) : ''}`;
+    if (d.tipo === 'pmc')            return `${t}: PMC dashboard ${f(d.pmcDash, 5)}, Fineco ${f(d.pmcFin, 5)} (tolleranza ${fmt(TOLL_PMC_RIC, 4)})${d.soloCommissione ? ` — differenza dovuta solo alla commissione d'acquisto (${fmt(d.commissione, 2)} €): la dashboard la include nel costo, Fineco espone il carico secco` : ''}`;
     if (d.tipo === 'solo_dashboard') return `${t}: presente solo nella dashboard`;
     return `${t}: presente solo in Fineco`;
   };
