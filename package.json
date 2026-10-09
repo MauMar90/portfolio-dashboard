@@ -1,0 +1,14 @@
+{
+  "name": "portfolio-dashboard",
+  "private": true,
+  "description": "Dashboard investimenti: solo per i test locali (npm test). L'app è index.html, senza build.",
+  "scripts": {
+    "test": "node scripts/run-tests.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
