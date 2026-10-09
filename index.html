@@ -480,6 +480,15 @@
   .nota-valori { margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--text-dim); }
   .nota-valori strong { color: var(--text); font-weight: 500; }
   .backup-nota { font-size: 12px; line-height: 1.5; color: var(--text-dim); margin-top: 10px; }
+  .ric-form { margin-top: 14px; padding: 12px; border: 1px solid var(--gold-dim); border-radius: 8px; font-size: 13px; line-height: 1.5; }
+  .ric-riga { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+  .ric-nota { font-size: 12px; color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
+  .ric-box { margin-top: 12px; font-size: 13px; line-height: 1.5; }
+  .ric-sintesi { min-height: 44px; display: flex; align-items: center; }
+  .ric-sintesi.ok { color: var(--green); }
+  .ric-sintesi.ko { color: var(--gold); cursor: pointer; }
+  .ric-dettagli ul { margin: 6px 0 0 18px; }
+  .ric-dettagli li { margin-top: 4px; }
   .backup-azioni { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 
   /* ── Mobile (≤480px): solo leggibilità/usabilità, desktop invariato ── */
@@ -820,6 +829,16 @@
       <div class="drop-label">Trascina qui il file Fineco oppure <span>selezionalo</span></div>
       <div class="drop-label" style="margin-top:4px; font-size:11px;">Accetta .xlsx · .xls · .csv</div>
     </div>
+    <div id="ricForm" class="ric-form" style="display:none">
+      <div>Export del <strong>portafoglio</strong> Fineco riconosciuto (<span id="ricFile"></span>): usato solo per il controllo, nessun dato viene importato.</div>
+      <div class="ric-riga">
+        <label for="ricData">Data della fotografia</label>
+        <input type="date" id="ricData"/>
+        <button class="btn" onclick="eseguiRiconciliazione()">Confronta</button>
+      </div>
+      <div class="ric-nota">Il file non contiene la data: è proposta quella del file. Valgono le operazioni fino a quel giorno compreso (Fineco non esporta l'ora).</div>
+    </div>
+    <div id="ricBox" class="ric-box"></div>
     <div class="import-result" id="importResult">
       <div id="importSummary" style="color:var(--text-dim); margin-bottom:4px;"></div>
       <div id="importQuality" style="display:none; margin-bottom:10px; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px; line-height:1.5;"></div>
@@ -1972,6 +1991,10 @@ function handleFile(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
+      // Export del PORTAFOGLIO Fineco ("Portafoglio sintesi"): solo riconciliazione, nessun import.
+      // Riconosciuto prima di qualsiasi lettura come export movimenti: non tocca pfImportedOps.
+      if (eExportPortafoglio(rows)) { avviaRiconciliazione(rows, file); return; }
+
       // find header row (contains "Operazione" or "Data valuta")
       let hIdx = rows.findIndex(r => r.some(c => String(c).includes('Data valuta') || String(c).includes('Operazione')));
       if (hIdx < 0) hIdx = rows.findIndex(r => r.some(c => String(c).includes('Titolo')));
@@ -2393,6 +2416,154 @@ function aggiornaStatoBackup() {
   warn.style.display = msg ? 'block' : 'none';
 }
 
+// ── Riconciliazione con l'export del portafoglio Fineco ───────────────────────
+// L'export "Portafoglio sintesi" è una fotografia (quantità e prezzo medio di carico per ISIN)
+// usata SOLO come controllo: non scrive mai in pfImportedOps, non modifica posizioni né flussi
+// XIRR. La posizione della dashboard è ricalcolata dallo storico (in sola lettura, stesse formule
+// di calcolaPosizione) con le sole operazioni fino al giorno della fotografia compreso, inteso
+// come giorno di calendario Europe/Rome. Operazioni manuali escluse dal confronto (elencate).
+const TOLL_QTA_RIC = 1e-6;   // quantità: devono coincidere
+const TOLL_PMC_RIC = 0.0001; // € per quota: la dashboard arrotonda il PMC a 4 decimali, Fineco a 5
+const giornoRoma = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const giornoIt = g => g.split('-').reverse().join('/');
+const escHtml = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+function indiceIntestazionePortafoglio(rows) {
+  return rows.findIndex(r => {
+    const c = (r || []).map(x => String(x).trim().toLowerCase());
+    return c.includes('isin') && c.some(x => x.startsWith('p.zo medio di carico'))
+      && !c.includes('segno') && !c.includes('operazione') && !c.some(x => x.includes('data valuta'));
+  });
+}
+function eExportPortafoglio(rows) { return indiceIntestazionePortafoglio(rows) >= 0; }
+
+function leggiExportPortafoglio(rows) {
+  const h = indiceIntestazionePortafoglio(rows);
+  const head = rows[h].map(x => String(x).trim().toLowerCase());
+  const col = n => head.findIndex(x => x.startsWith(n));
+  const cIsin = head.indexOf('isin'), cTit = col('titolo'), cQta = col('quantit'), cPmc = col('p.zo medio di carico'), cStr = col('strumento');
+  const num = v => typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+  return rows.slice(h + 1)
+    .filter(r => r && /^[A-Z]{2}[A-Z0-9]{10}$/.test(String(r[cIsin] || '').trim()))
+    .map(r => ({ isin: String(r[cIsin]).trim(), titolo: String(r[cTit] || ''), q: num(r[cQta]), pmc: num(r[cPmc]), strumento: String(r[cStr] || '') }));
+}
+
+// Posizioni aperte della dashboard al giorno indicato (AAAA-MM-GG, Europe/Rome), dallo storico.
+// mappaOp (facoltativa) trasforma una COPIA di ogni operazione prima del calcolo.
+function posizioniAlGiorno(giorno, mappaOp = o => o) {
+  const out = {};
+  for (const [isin, voce] of Object.entries(importedOpsStore)) {
+    const filtrata = {
+      ops:    (voce.ops    || []).filter(o => giornoRoma(o.date) <= giorno).map(o => mappaOp({ ...o }, isin)),
+      cedole: (voce.cedole || []).filter(c => giornoRoma(c.date) <= giorno),
+    };
+    if (!filtrata.ops.length) continue;
+    const d = calcolaPosizione(isin, filtrata, FINECO_MAP[isin] ? FINECO_MAP[isin].name : isin, new Date());
+    if (!d.closed) out[isin] = d;
+  }
+  return out;
+}
+
+// BTP: PMC della dashboard tolte le commissioni d'acquisto (Prezzo export al netto di comm/quota,
+// in % del nominale: comm € / quote / 10). Serve solo a spiegare una differenza con il carico
+// secco di Fineco; calcolaPosizione non cambia.
+function pmcBtpSenzaCommissioni(giorno, isin) {
+  const d = posizioniAlGiorno(giorno, (o, i) => {
+    if (i === isin && o.segno === 'A' && o.qty > 0) o.price -= (o.comm || 0) / o.qty / 10;
+    return o;
+  })[isin];
+  return d ? d.price : null;
+}
+
+function confrontaConFineco(righe, giorno) {
+  const dash = posizioniAlGiorno(giorno);
+  const fin = Object.fromEntries(righe.map(r => [r.isin, r]));
+  const differenze = []; let coincidenti = 0;
+  const isins = [...new Set([...Object.keys(dash), ...Object.keys(fin)])].sort();
+  for (const isin of isins) {
+    const a = dash[isin], b = fin[isin];
+    const nome = a ? a.name : b.titolo;
+    if (!a) { differenze.push({ isin, nome, tipo: 'solo_fineco', qFin: b.q, pmcFin: b.pmc }); continue; }
+    if (!b) { differenze.push({ isin, nome, tipo: 'solo_dashboard', qDash: a.qty, pmcDash: a.price }); continue; }
+    const qFin = a.isNominal ? b.q / 1000 : b.q;   // BTP: Fineco espone il nominale
+    if (Math.abs(a.qty - qFin) > TOLL_QTA_RIC) {
+      differenze.push({ isin, nome, tipo: 'quantita', qDash: a.qty, qFin });
+    } else if (Math.abs(a.price - b.pmc) > TOLL_PMC_RIC + 1e-12) {
+      const diff = { isin, nome, tipo: 'pmc', pmcDash: a.price, pmcFin: b.pmc };
+      // BTP: spiegazione esplicita SOLO se togliendo le commissioni d'acquisto il PMC coincide
+      const secco = a.isNominal ? pmcBtpSenzaCommissioni(giorno, isin) : null;
+      if (secco !== null && Math.abs(secco - b.pmc) <= TOLL_PMC_RIC + 1e-12) {
+        diff.soloCommissione = true;
+        diff.commissione = (a.price - secco) * a.qty * 10;   // € sulle quote ancora in portafoglio
+      }
+      differenze.push(diff);
+    } else coincidenti++;
+  }
+  return { giorno, totale: isins.length, coincidenti, differenze };
+}
+
+let fotografiaFineco = null;   // righe dell'ultimo export portafoglio caricato (solo in memoria)
+
+function avviaRiconciliazione(rows, file) {
+  fotografiaFineco = { righe: leggiExportPortafoglio(rows), nomeFile: (file && file.name) || '' };
+  clearImport();
+  document.getElementById('ricFile').textContent = `${fotografiaFineco.righe.length} titoli in "${fotografiaFineco.nomeFile}"`;
+  document.getElementById('ricData').value = giornoRoma(new Date(file && file.lastModified ? file.lastModified : Date.now()));
+  document.getElementById('ricForm').style.display = 'block';
+}
+
+function eseguiRiconciliazione() {
+  if (!fotografiaFineco) return;
+  const giorno = document.getElementById('ricData').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(giorno)) { alert('Indica la data della fotografia.'); return; }
+  const esito = confrontaConFineco(fotografiaFineco.righe, giorno);
+  if (esito.differenze.length) {
+    // A ritroso sui giorni delle operazioni precedenti: se a uno coincide tutto, lo si segnala
+    // (la data indicata NON viene cambiata).
+    const giorni = [...new Set(Object.values(importedOpsStore).flatMap(v => (v.ops || []).map(o => giornoRoma(o.date))))]
+      .filter(g => g < giorno).sort().reverse().slice(0, 200);
+    for (const g of giorni) {
+      if (confrontaConFineco(fotografiaFineco.righe, g).differenze.length === 0) { esito.giornoProbabile = g; break; }
+    }
+  }
+  esito.manuali = operations.filter(o => !o.fromImport && o.data && giornoRoma(new Date(o.data)) <= giorno)
+    .map(o => `${o.ticker} (${o.tipo === 'A' ? 'acquisto' : 'vendita'} del ${new Date(o.data).toLocaleDateString('it-IT')})`);
+  esito.controllo = new Date().toISOString();
+  esito.file = fotografiaFineco.nomeFile;
+  try { localStorage.setItem('pfRiconciliazione', JSON.stringify(esito)); } catch (e) {}
+  document.getElementById('ricForm').style.display = 'none';
+  renderRiconciliazione();
+}
+
+function renderRiconciliazione() {
+  const box = document.getElementById('ricBox');
+  if (!box) return;
+  let e = null;
+  try { e = JSON.parse(localStorage.getItem('pfRiconciliazione') || 'null'); } catch (x) { e = null; }
+  if (!e) { box.innerHTML = ''; return; }
+  const sintesi = `Riconciliazione al ${giornoIt(e.giorno)}: ${e.coincidenti} su ${e.totale} coincidono`
+    + (e.controllo ? ` (controllo del ${new Date(e.controllo).toLocaleDateString('it-IT')})` : '');
+  const n = (e.manuali || []).length;
+  const notaManuali = n ? `<div class="ric-nota">${n === 1 ? '1 operazione manuale' : n + ' operazioni manuali'} fino al ${giornoIt(e.giorno)} ${n === 1 ? 'non inclusa' : 'non incluse'} nel confronto: ${e.manuali.map(escHtml).join(', ')}.</div>` : '';
+  if (!e.differenze.length) {
+    box.innerHTML = `<div id="ricSintesi" class="ric-sintesi ok">✓ ${sintesi}</div>${notaManuali}`;
+    return;
+  }
+  const f = (v, d) => v === undefined ? '—' : fmt(v, d);
+  const riga = d => {
+    const t = `<strong>${escHtml(d.nome)}</strong> (${d.isin})`;
+    if (d.tipo === 'quantita')       return `${t}: quantità dashboard ${f(d.qDash, 4)}, Fineco ${f(d.qFin, 4)}`;
+    if (d.tipo === 'pmc')            return `${t}: PMC dashboard ${f(d.pmcDash, 5)}, Fineco ${f(d.pmcFin, 5)} (tolleranza ${fmt(TOLL_PMC_RIC, 4)})${d.soloCommissione ? ` — differenza dovuta solo alla commissione d'acquisto (${fmt(d.commissione, 2)} €): la dashboard la include nel costo, Fineco espone il carico secco` : ''}`;
+    if (d.tipo === 'solo_dashboard') return `${t}: presente solo nella dashboard`;
+    return `${t}: presente solo in Fineco`;
+  };
+  const probabile = e.giornoProbabile
+    ? `<div class="ric-nota">Tutto coincide al ${giornoIt(e.giornoProbabile)}: probabilmente è la data della fotografia. La data indicata non è stata cambiata.</div>`
+    : '';
+  box.innerHTML = `<details class="ric-dettagli"><summary id="ricSintesi" class="ric-sintesi ko">⚠️ ${sintesi} — dettagli</summary>`
+    + `<ul>${e.differenze.map(d => `<li>${riga(d)}</li>`).join('')}</ul>${probabile}${notaManuali}</details>`;
+}
+
 // Richiesta al browser di non cancellare i dati per liberare spazio (può essere rifiutata)
 async function richiediArchiviazionePersistente() {
   const el = document.getElementById('persistStato');
@@ -2460,6 +2631,7 @@ document.getElementById('ts').textContent = new Date().toLocaleDateString('it-IT
 ricostruisciDaStorico(); // posizioni importate ricalcolate dallo storico prima del primo render
 render();
 aggiornaStatoBackup();
+renderRiconciliazione();
 richiediArchiviazionePersistente();
 
 // ── Aggiornamento automatico prezzi (prices.json, generato da GitHub Action) ───
