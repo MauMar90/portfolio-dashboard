@@ -1,33 +1,33 @@
 {
-  "generated_at": "2026-10-23T20:15:20.362Z",
+  "generated_at": "2026-10-26T21:30:38.683Z",
   "entries": {
     "IE00B4L5Y983": {
       "ticker": "SWDA.MI",
-      "close": 129.88999938964844,
+      "close": 130.50999450683594,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:19.836Z",
+      "session_date": "2026-10-26",
+      "fetched_at": "2026-10-26T21:30:38.024Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE00BTJRMP35": {
       "ticker": "XMME.MI",
-      "close": 77.18599700927734,
+      "close": 77.04199981689453,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:19.929Z",
+      "session_date": "2026-10-26",
+      "fetched_at": "2026-10-26T21:30:38.137Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE00B53QG562": {
       "ticker": "CSEMU.MI",
-      "close": 236.1300048828125,
+      "close": 238.0399932861328,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:19.980Z",
+      "session_date": "2026-10-26",
+      "fetched_at": "2026-10-26T21:30:38.210Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -37,17 +37,17 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:20.036Z",
+      "fetched_at": "2026-10-26T21:30:38.284Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "LU0290358497": {
       "ticker": "XEON.MI",
-      "close": 150.59339904785156,
+      "close": 150.6132049560547,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:20.111Z",
+      "session_date": "2026-10-26",
+      "fetched_at": "2026-10-26T21:30:38.356Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -57,37 +57,37 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:20.179Z",
+      "fetched_at": "2026-10-26T21:30:38.450Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "LU1287023003": {
       "ticker": "EM57.MI",
-      "close": 155.75,
+      "close": 156.24000549316406,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:20.232Z",
+      "session_date": "2026-10-26",
+      "fetched_at": "2026-10-26T21:30:38.528Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE0006WW1TQ4": {
       "ticker": "EXUS.MI",
-      "close": 40.060001373291016,
+      "close": 40.349998474121094,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-23",
-      "fetched_at": "2026-10-23T20:15:20.313Z",
+      "session_date": "2026-10-26",
+      "fetched_at": "2026-10-26T21:30:38.609Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "FR0013416716": {
       "ticker": "GOLD.MI",
-      "close": 143.2899932861328,
+      "close": 141.3800048828125,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-10-22",
-      "fetched_at": "2026-10-23T20:15:20.362Z",
+      "session_date": "2026-10-23",
+      "fetched_at": "2026-10-26T21:30:38.683Z",
       "source": "yahoo_chart",
       "status": "ok"
     }
