@@ -1,53 +1,53 @@
 {
-  "generated_at": "2026-11-05T22:36:52.074Z",
+  "generated_at": "2026-11-06T21:58:56.758Z",
   "entries": {
     "IE00B4L5Y983": {
       "ticker": "SWDA.MI",
-      "close": 127.56999969482422,
+      "close": 127.4000015258789,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.656Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.244Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE00BTJRMP35": {
       "ticker": "XMME.MI",
-      "close": 73.3219985961914,
+      "close": 74.73799896240234,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.720Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.355Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE00B53QG562": {
       "ticker": "CSEMU.MI",
-      "close": 243.02999877929688,
+      "close": 241.17999267578125,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.765Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.413Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "LU1781541252": {
       "ticker": "LCJP.MI",
-      "close": 22.40999984741211,
+      "close": 22.114999771118164,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.812Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.472Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "LU0290358497": {
       "ticker": "XEON.MI",
-      "close": 150.71749877929688,
+      "close": 150.71380615234375,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.861Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.530Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -57,27 +57,27 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.908Z",
+      "fetched_at": "2026-11-06T21:58:56.583Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "LU1287023003": {
       "ticker": "EM57.MI",
-      "close": 157.85000610351562,
+      "close": 157.74000549316406,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:51.966Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.639Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
     "IE0006WW1TQ4": {
       "ticker": "EXUS.MI",
-      "close": 40.51499938964844,
+      "close": 40.14500045776367,
       "currency": "EUR",
       "exchange": "MIL",
-      "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:52.015Z",
+      "session_date": "2026-11-06",
+      "fetched_at": "2026-11-06T21:58:56.695Z",
       "source": "yahoo_chart",
       "status": "ok"
     },
@@ -87,7 +87,7 @@
       "currency": "EUR",
       "exchange": "MIL",
       "session_date": "2026-11-05",
-      "fetched_at": "2026-11-05T22:36:52.074Z",
+      "fetched_at": "2026-11-06T21:58:56.758Z",
       "source": "yahoo_chart",
       "status": "ok"
     }
